@@ -1,0 +1,38 @@
+name: musings
+version: 0.0.1
+cabal-version: 1.12
+build-type: Simple
+license: AllRightsReserved
+
+executable musings
+    main-is: Main.hs
+    build-depends:
+        QuickCheck -any,
+        base -any,
+        containers -any,
+        doctest -any,
+        gnuplot -any,
+        normaldistribution -any,
+        random >=1.1 && <1.2,
+        time -any,
+        vector -any,
+        dlist -any,
+        vector -any,
+        linear -any,
+        gloss -any,
+        mtl -any
+    cc-options: -O3
+    default-language: Haskell2010
+    extra-libraries:
+        m
+    hs-source-dirs: src
+    other-modules:
+        Physics.Basic
+        Swarm.Swarm
+        Swarm.Settings
+        A.E
+        A.D
+        A.C
+        A.B
+    ghc-options: -rtsopts -ferror-spans -threaded -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math
+
