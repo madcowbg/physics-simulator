@@ -18,7 +18,9 @@ module Physics.BasicDraw (
 
 import Physics.Primitives
 import Physics.Objects
+import Physics.AbstractObjects
 import Physics.Forces
+import Physics.AbstractForces
 import Physics.Time
 import Physics.World
 
@@ -30,62 +32,35 @@ import GHC.Float
 class Drawable d where
     draw        :: d -> Picture
 
+instance Drawable SmallWorld where
+    draw (SmallWorld crafts ground) = pictures (drawForce ground:map (color blue . draw) crafts)
 
---class DrawableForce f where
---    drawForce     :: f -> PhysicalObj -> Picture
---
---instance DrawableForce Gravity where
---    drawForce (Gravity direction gconst) (PhysicalObj (PlaceState place _ _) _)
---                = drawVector place (direction * gconst)
---
---instance DrawableForce GroundForce where
---    drawForce (GroundForce zlim) (PhysicalObj (PlaceState place _)
---        = drawRectangle 0 (-15) 500 30
+drawAction                              :: Place -> ForceAction -> Picture
+drawAction craftPlace (ForceAction place forceAmt) = drawVector (place - craftPlace) forceAmt
 
-
---    getView                ::  f -> ((Place, Velocity) -> Picture) -> Picture -- NOT GOOD
---
---type DrawObj f =
---
---
---
---    applicationPoint         :: f ->
---
---    gravity
---       getView (Gravity direction _) g  = g (Acceleration 0 0 0, direction) -- NOT GOOD
---
---       ground
---           getView _ g                     = g (Acceleration 0 0 0, Acceleration 0 0 0) -- NOT GOOD
-
---drawF           :: (Force f) => f -> Picture
---drawF g         =  getView g (\tuple -> drawVector (fst tuple) (snd tuple))
-
-
-instance Drawable World where
-    draw (World crafts forces ground) = pictures (map (color blue . draw) crafts ++ [drawForce ground] ++ map (color red . drawAction) (concatMap (\craft -> getActions (Tick 1.0) craft forces) crafts))
-    --getAction                   ::  Craft -> Tick -> GlobalForce -> [ForceAction]
--- getActions                  ::  Tick-> Craft -> [GlobalForce] -> [ForceAction]
-
-drawAction                              :: ForceAction -> Picture
-drawAction NoAction                     = Blank
-drawAction (ForceAction place forceAmt) = drawVector place forceAmt
-drawAction (ShockAction place _)        = drawCircle place 0.2
+--drawAction (ShockAction place _)        = drawCircle place 0.2 TODO draw craft shocks
 
 class DrawableForce f where
     drawForce       :: f -> Picture
 
-instance DrawableForce GroundForce where
-    drawForce (GroundForce zlim)
+instance DrawableForce StickingGround where
+    drawForce (StickingGround zlim)
+                    = drawRectangle 0 (zlim-15) 1200 30
+
+instance DrawableForce BouncingGround where
+    drawForce (BouncingGround zlim)
                     = drawRectangle 0 (zlim-15) 1200 30
 
 
-instance Drawable Craft where
-    draw (Craft parts (PlaceState place vel) rotationState)
-            = translate (double2Float (xcoord place)) (double2Float (zcoord place)) $ pictures (
-            map draw parts ++ [drawArrow 0 0 (xcoord vel) (zcoord vel)])
+instance Drawable RigidCraft where
+    draw craft@(RigidCraft parts (PlaceState place vel) rotationState ground)
+            = translate (double2Float (xcoord place)) (double2Float (zcoord place))
+            $ pictures (map draw parts ++ [drawArrow 0 0 (xcoord vel) (zcoord vel)]
+                            ++ map (color red . drawAction place) (partsActions (Tick 1.0) craft))
 
-instance Drawable PhysicalObj where -- NOT GOOD
-    draw (PhysicalObj place vel) = pictures [drawCircle place 5]
+
+instance Drawable RigidPointObj where -- NOT GOOD
+    draw obj        = pictures [drawCircle (objPlace obj) 5]
 
 
 

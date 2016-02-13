@@ -13,36 +13,44 @@
 -----------------------------------------------------------------------------
 
 module Physics.Forces (
-    Force,
     Gravity (Gravity),
-    GroundForce (GroundForce),
-    ForceAction (ForceAction, ShockAction, NoAction),
-    act
+    BouncingGround (BouncingGround),
+    StickingGround (StickingGround),
+    AirResistance (AirResistance)
 ) where
 
 
 import Physics.Primitives
-import Physics.Objects
-
--- Forces
-class Force f where
-    act                     :: f -> Tick -> Place -> PhysicalObj -> ForceAction
-
-data ForceAction = ForceAction Place ForceAmt | ShockAction Place (Velocity->Velocity) | NoAction
+import Physics.AbstractObjects
+import Physics.AbstractForces
+import Physics.Time
 
 data Gravity = Gravity {accel :: Accelleration, gconst :: Double}
 
 instance Force Gravity where
-    act force tick craftPlace (PhysicalObj partPlace mass)
-                    = ForceAction (craftPlace + partPlace) (accellGravity force tick mass)
+    act force tick craftPlace craftVel obj
+                    = ForceAction (craftPlace + objPlace obj) (accellGravity force tick (objMass obj))
 
 accellGravity              :: Gravity -> Tick -> Double -> ForceAmt
-accellGravity (Gravity direction gconst) (Tick s) mass = vectorScale direction (s * gconst * mass)
+accellGravity gravity (Tick s) mass = vectorScale (accel gravity) (s * gconst gravity * mass)
 
-data GroundForce = GroundForce {zlim :: Double}
-instance Force GroundForce where
-    act (GroundForce zlim) tick craftPlace (PhysicalObj partPlace mass)
-                    = let actionPlace = (craftPlace + partPlace)
+data BouncingGround = BouncingGround {zlim :: Double}
+instance ShockForce BouncingGround where
+    shock (BouncingGround zlim) tick craftPlace obj
+                    = let actionPlace = (craftPlace + objPlace obj)
                         in if zcoord actionPlace < zlim
                         then ShockAction (mirrorZpos actionPlace zlim) mirrorZvel -- FIXME somewhat wrong ... regarding aggregation - should be craft force
-                        else NoAction
+                        else NoShockAction
+
+data StickingGround = StickingGround {zground :: Double}
+instance ShockForce StickingGround where
+    shock (StickingGround zground) tick craftPlace obj
+                    = let actionPlace = (craftPlace + objPlace obj)
+                        in if zcoord actionPlace < zground
+                        then ShockAction (mirrorZpos actionPlace zground) stickZvel -- FIXME somewhat wrong ... regarding aggregation - should be craft force
+                        else NoShockAction
+
+data AirResistance = AirResistance {drag :: Double}
+instance Force AirResistance where
+    act (AirResistance drag) (Tick s) craftPlace craftVel obj
+                    = ForceAction (craftPlace + objPlace obj) (vectorScale craftVel (-1 * s * drag))

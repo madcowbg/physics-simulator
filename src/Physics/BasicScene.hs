@@ -30,8 +30,5 @@ import Graphics.Gloss.Data.ViewPort
 
 import GHC.Float
 
---data Scene = Scene {crafts :: [Craft], forces :: [SceneForce]} --gravity :: Gravity, ground :: GroundForce}
---data SceneForce = forall f. Force f => SceneForce {force :: f} -- another way to incorporate forces -> split action and view
-
-update      :: ViewPort -> Float -> World -> World
+update      :: (World w) => ViewPort -> Float -> w -> w
 update _ t   = updateWorld (float2Double t)
