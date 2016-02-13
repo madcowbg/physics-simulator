@@ -24,6 +24,7 @@ import Physics.World
 import Physics.AbstractForces
 import Physics.Forces
 import Physics.BasicDraw
+import Physics.Craft.Rigid
 
 -- for drawing
 import Graphics.Gloss

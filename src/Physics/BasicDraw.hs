@@ -23,6 +23,7 @@ import Physics.Forces
 import Physics.AbstractForces
 import Physics.Time
 import Physics.World
+import Physics.Craft.Rigid
 
 import Graphics.Gloss
 import Graphics.Gloss.Data.Color

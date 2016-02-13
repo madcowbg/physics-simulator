@@ -21,6 +21,7 @@ module Physics.World (
 import Physics.Forces
 import Physics.AbstractObjects
 import Physics.Objects
+import Physics.Craft.Rigid
 import Physics.AbstractForces
 import Physics.Time
 
