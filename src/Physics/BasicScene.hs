@@ -31,4 +31,4 @@ import Graphics.Gloss.Data.ViewPort
 import GHC.Float
 
 update      :: (World w) => ViewPort -> Float -> w -> w
-update _ t   = updateWorld (float2Double t)
+update _ t   = updateWorld (float2Double t/5)

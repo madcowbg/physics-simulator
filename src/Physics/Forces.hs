@@ -28,31 +28,29 @@ import Physics.Time
 data Gravity = Gravity {accel :: Accelleration, gconst :: Double}
 
 instance Force Gravity where
-    act force tick change craftVel obj
-                    = ForceAction (change (objPlace obj)) (accellGravity force tick (objMass obj))
+    act force tick globalPlace globalVel obj
+                    = ForceAction globalPlace (accellGravity force tick (objMass obj))
 
 accellGravity              :: Gravity -> Tick -> Double -> ForceAmt
 accellGravity gravity (Tick s) mass = vectorScale (accel gravity) (s * gconst gravity * mass)
 
 data BouncingGround = BouncingGround {zlim :: Double}
 instance ShockForce BouncingGround where
-    shock (BouncingGround zlim) tick craftPlace obj
-                    = let actionPlace = (craftPlace + objPlace obj)
-                        in if zcoord actionPlace < zlim
-                        then ShockAction (mirrorZpos actionPlace zlim) mirrorZvel -- FIXME somewhat wrong ... regarding aggregation - should be craft force
+    shock (BouncingGround zlim) tick globalPlace obj
+                    = if zcoord globalPlace < zlim
+                        then ShockAction (mirrorZpos globalPlace zlim) mirrorZvel -- FIXME somewhat wrong ... regarding aggregation - should be craft force
                         else NoShockAction
 
 data StickingGround = StickingGround {zground :: Double}
 instance ShockForce StickingGround where
-    shock (StickingGround zground) tick craftPlace obj
-                    = let actionPlace = (craftPlace + objPlace obj)
-                        in if zcoord actionPlace < zground
-                        then ShockAction (mirrorZpos actionPlace zground) stickZvel -- FIXME somewhat wrong ... regarding aggregation - should be craft force
+    shock (StickingGround zground) tick globalPlace obj
+                    = if zcoord globalPlace < zground
+                        then ShockAction (mirrorZpos globalPlace zground) stickZvel -- FIXME somewhat wrong ... regarding aggregation - should be craft force
                         else NoShockAction
 
 data AirResistance = AirResistance {drag :: Double}
 instance Force AirResistance where
-    act (AirResistance drag) (Tick s) change craftVel obj
-                    = ForceAction (change (objPlace obj)) (vectorScale craftVel (-1 * s * drag))
+    act (AirResistance drag) (Tick s) globalPlace globalVel obj
+                    = ForceAction globalPlace (vectorScale globalVel (-1 * s * drag))
 
 

@@ -46,9 +46,23 @@ instance Craft RigidCraft where
     craftRotation               = rotationState
     momentOfInertia craft       = torqueSum (map (neededTorque (craftMassCenter craft)) (parts craft))
 
-    partsActions t c
-                                = concatMap (\p -> actOnChain (forces p) t (relativeToCraft c) (velocity (placeState c)) p) (parts c)
+    partsActions t c            = concatMap (\p -> actOnChain (forces p) t (globalPosition c p) (globalVelocity c p t) p) (parts c)
     craftActions t c            = [shock (ground c) t (objPlace c) c]
+
+globalPosition      :: RigidCraft -> RigidPointObj -> Place
+globalPosition craft obj = objPlace craft + orientVector (orient (rotationState craft)) (objPlace obj)
+
+globalVelocity      :: RigidCraft -> RigidPointObj -> Tick -> Place
+globalVelocity craft obj tick = velocity (placeState craft) + calcRotationVelocity (objPlace obj) (rotationState craft) tick
+
+
+-- TODO move to a more primitive import...
+-- TODO write in analytic form
+--calcRotationVelocity
+calcRotationVelocity            :: Place -> RotationState -> Tick -> Velocity
+calcRotationVelocity localPlace origRotation tick@(Tick s)
+                                = vectorScale (orientVector (orient deltaRotation) localPlace - orientVector (orient origRotation) localPlace) (1/s)
+                                  where deltaRotation = twist tick origRotation
 
 neededTorque        :: Place -> RigidPointObj -> Torque
 neededTorque centerMass (RigidPointObj placePart massPart _)
