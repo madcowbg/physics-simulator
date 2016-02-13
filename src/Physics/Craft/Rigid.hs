@@ -44,15 +44,22 @@ instance Craft RigidCraft where
     craftMassCenter craft       =  sum (map (\obj -> vectorScale (objPlace obj) (objMass obj)) (parts craft))
     craftPlace                  = placeState
     craftRotation               = rotationState
-    momentOfInertia c           = makevect 1 1 1 -- FIXME calculate properly!
+    momentOfInertia craft       = torqueSum (map (neededTorque (craftMassCenter craft)) (parts craft))
 
     partsActions t c
-                                = concatMap (\p -> actOnChain (forces p) t (objPlace c) (velocity (placeState c)) p) (parts c)
+                                = concatMap (\p -> actOnChain (forces p) t (relativeToCraft c) (velocity (placeState c)) p) (parts c)
     craftActions t c            = [shock (ground c) t (objPlace c) c]
+
+neededTorque        :: Place -> RigidPointObj -> Torque
+neededTorque centerMass (RigidPointObj placePart massPart _)
+                    = calculateRotationIntertia direction massPart
+                    where direction = placePart - centerMass
 
 instance Accelleratable RigidCraft where
     accellerate f craft         = craft { placeState = accellerate f (craftPlace craft)}
 
+instance Torqueable RigidCraft where
+    torque f craft              = craft { rotationState = torque f (rotationState craft)}
 
 instance Rotatable RigidCraft where
     twist tick craft         = RigidCraft (parts craft) (craftPlace craft) (twist tick (craftRotation craft)) (ground craft)

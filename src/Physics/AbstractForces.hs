@@ -27,7 +27,7 @@ import Physics.Time
 
 -- Forces
 class Force f where
-    act             :: (PhysicalObj o) => f -> Tick -> Place -> Velocity -> o -> ForceAction
+    act             :: (PhysicalObj o) => f -> Tick -> (Place -> Place) -> Velocity -> o -> ForceAction
 
 class ShockForce f where
     shock           :: (ShockableObj o) => f -> Tick -> Place -> o -> ShockAction
@@ -37,7 +37,7 @@ data ShockAction    = ShockAction Place (Velocity->Velocity) | NoShockAction
 
 data ForceChain = forall f. (Force f) => ForceChain {this :: f, next :: ForceChain } | ForceEnd
 
-actOnChain                      :: (PhysicalObj o) => ForceChain -> Tick -> Place -> Velocity -> o -> [ForceAction]
+actOnChain                      :: (PhysicalObj o) => ForceChain -> Tick -> (Place -> Place) -> Velocity -> o -> [ForceAction]
 actOnChain ForceEnd _ _ _ _      = []
-actOnChain (ForceChain this next) tick place vel obj
-                                = act this tick place vel obj:actOnChain next tick place vel obj
+actOnChain (ForceChain this next) tick change vel obj
+                                = act this tick change vel obj:actOnChain next tick change vel obj

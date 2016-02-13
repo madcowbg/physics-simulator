@@ -31,15 +31,17 @@ import Graphics.Gloss
 
 
 createScene :: SmallWorld
-createScene = let gravity = Gravity (makevect 0 0 (-1)) 20
+createScene = let gravity = Gravity (makevect 0 0 (-1)) 5--20
                   ground = BouncingGround 0
                   globalChain =  ForceChain gravity ForceEnd
-                  drag  = AirResistance 0.4
-                  placeState = PlaceState (makevect (-200) 0 100) (makevect 15 0 15)
-                  rotState   = RotationState (makevect 0 0 1) (makevect 0.1 0 0.1)
-                  leftPart = RigidPointObj (makevect (-10) 0 (-15)) 10 (ForceChain drag globalChain)
-                  rightPart = RigidPointObj (makevect 10 0 (-15)) 5 (ForceChain drag globalChain)
-              in SmallWorld [RigidCraft [leftPart, rightPart] placeState rotState ground] ground
+                  dragLeft  = AirResistance 10
+                  dragRight  = AirResistance 0.2
+                  placeState = PlaceState (makevect (-200) 0 200) (makevect 15 0 15)
+                  rotState   = RotationState identityOrient (Rotation 0 0 0) --(Rotation 0 0.01 0)
+                  leftPart = RigidPointObj (makevect (-10) 0 (-15)) 5 (ForceChain dragLeft globalChain)
+                  rightPart = RigidPointObj (makevect 10 0 (-15)) 10 (ForceChain dragRight globalChain)
+                  topPart = RigidPointObj (makevect 0 0 (15)) 10 globalChain
+              in SmallWorld [RigidCraft [leftPart, rightPart, topPart] placeState rotState ground] ground
 
 window = InWindow "My Window" (500, 500) (0, 0)
 fps = 60

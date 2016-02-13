@@ -28,8 +28,8 @@ import Physics.Time
 data Gravity = Gravity {accel :: Accelleration, gconst :: Double}
 
 instance Force Gravity where
-    act force tick craftPlace craftVel obj
-                    = ForceAction (craftPlace + objPlace obj) (accellGravity force tick (objMass obj))
+    act force tick change craftVel obj
+                    = ForceAction (change (objPlace obj)) (accellGravity force tick (objMass obj))
 
 accellGravity              :: Gravity -> Tick -> Double -> ForceAmt
 accellGravity gravity (Tick s) mass = vectorScale (accel gravity) (s * gconst gravity * mass)
@@ -52,5 +52,7 @@ instance ShockForce StickingGround where
 
 data AirResistance = AirResistance {drag :: Double}
 instance Force AirResistance where
-    act (AirResistance drag) (Tick s) craftPlace craftVel obj
-                    = ForceAction (craftPlace + objPlace obj) (vectorScale craftVel (-1 * s * drag))
+    act (AirResistance drag) (Tick s) change craftVel obj
+                    = ForceAction (change (objPlace obj)) (vectorScale craftVel (-1 * s * drag))
+
+

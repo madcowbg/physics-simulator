@@ -37,6 +37,6 @@ class World w where
 
 instance World SmallWorld where
     runTime t world
-                    = world {crafts = map (move t) (crafts world)}
+                    = world {crafts = map (twist t . move t) (crafts world)}
     runForces t world   = world {crafts = map (executeForces t) (crafts world)}
 
