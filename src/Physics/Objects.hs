@@ -14,7 +14,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 
 module Physics.Objects (
-    Craft, craftPlace, craftMass, move, rotate, craftActions, executeActions, executeForces, partsActions,
+    Craft, craftPlace, craftMass, move, twist, craftActions, executeActions, executeForces, partsActions,
     RigidCraft (RigidCraft),
     RigidPointObj (RigidPointObj)
 ) where
@@ -93,7 +93,7 @@ actionToAccelleration mass (ForceAction place forceAmt)  = vectorScale forceAmt 
 
 
 instance Rotatable RigidCraft where
-    rotate tick craft         = RigidCraft (parts craft) (craftPlace craft) (rotate tick (craftRotation craft)) (ground craft)
+    twist tick craft         = RigidCraft (parts craft) (craftPlace craft) (twist tick (craftRotation craft)) (ground craft)
 
 instance Movable RigidCraft where
     move tick craft         = RigidCraft (parts craft) (move tick (craftPlace craft)) (craftRotation craft) (ground craft)

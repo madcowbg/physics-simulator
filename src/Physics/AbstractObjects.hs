@@ -17,7 +17,7 @@ module Physics.AbstractObjects (
     RotationState (RotationState), orient, rotation,
     ShockableObj, objPlace,
     PhysicalObj, objMass,
-    Rotatable, rotate,
+    Rotatable, twist,
     Movable, move,
     Accelleratable, accellerate
 ) where
@@ -38,7 +38,7 @@ class Accelleratable a where
     accellerate         :: (Velocity -> Velocity) -> a -> a
 
 class Rotatable r where
-    rotate              :: Tick -> r -> r
+    twist              :: Tick -> r -> r
 
 -- States
 data PlaceState     = PlaceState {place :: Place, velocity :: Velocity}
@@ -52,5 +52,5 @@ instance Accelleratable PlaceState where
     accellerate f state = state {velocity = f (velocity state)}
 
 instance Rotatable RotationState where
-    rotate (Tick s) (RotationState orient rotation)
+    twist (Tick s) (RotationState orient rotation)
                         = RotationState (vectorMulAdd orient rotation s) rotation

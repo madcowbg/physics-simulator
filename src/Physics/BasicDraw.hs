@@ -55,14 +55,14 @@ instance DrawableForce BouncingGround where
 instance Drawable RigidCraft where
     draw craft@(RigidCraft parts (PlaceState place vel) rotationState ground)
             = translate (double2Float (xcoord place)) (double2Float (zcoord place))
-            $ pictures (map draw parts ++ [drawArrow 0 0 (xcoord vel) (zcoord vel)]
+            $ pictures (drawCenter craft:map draw parts ++ [drawArrow 0 0 (xcoord vel) (zcoord vel)]
                             ++ map (color red . drawAction place) (partsActions (Tick 1.0) craft))
 
+drawCenter craft        = line [(-10, -15), (0, 15), (10,-15), (-10,-15)]
 
-instance Drawable RigidPointObj where -- NOT GOOD
-    draw obj        = pictures [drawCircle (objPlace obj) 5]
-
-
+instance Drawable RigidPointObj where
+    draw obj        = let place = objPlace obj
+                      in pictures [line [(0,0), (double2Float (xcoord place), double2Float (zcoord place))], drawCircle place 3]
 
 drawCircle          :: Place -> Double -> Picture
 drawCircle place size = translate (double2Float (xcoord place)) (double2Float (zcoord place)) $ circle (double2Float size)

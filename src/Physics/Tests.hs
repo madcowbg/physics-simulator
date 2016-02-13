@@ -36,8 +36,9 @@ createScene = let gravity = Gravity (makevect 0 0 (-1)) 20
                   drag  = AirResistance 0.4
                   placeState = PlaceState (makevect (-200) 0 100) (makevect 15 0 15)
                   rotState   = RotationState (makevect 0 0 1) (makevect 0.1 0 0.1)
-                  part = RigidPointObj (makevect 0 0 0) 10 (ForceChain drag globalChain)
-              in SmallWorld [RigidCraft [part] placeState rotState ground] ground
+                  leftPart = RigidPointObj (makevect (-10) 0 (-15)) 10 (ForceChain drag globalChain)
+                  rightPart = RigidPointObj (makevect 10 0 (-15)) 5 (ForceChain drag globalChain)
+              in SmallWorld [RigidCraft [leftPart, rightPart] placeState rotState ground] ground
 
 window = InWindow "My Window" (500, 500) (0, 0)
 fps = 60
