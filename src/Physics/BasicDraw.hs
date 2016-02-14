@@ -41,11 +41,13 @@ instance Drawable SmallWorld where
     draw (SmallWorld crafts ground) = pictures (drawForce ground:map (color blue . draw) crafts ++ map drawOrient crafts)
 
 drawOrient      :: RigidCraft -> Picture
-drawOrient craft@(RigidCraft parts (PlaceState place _) (RotationState orientation _) _)
-                = rotate (angle orientation) $ line [(0,0), (0, 100 * (double2Float (det33 orientation)))]
+drawOrient craft@(RigidCraft parts coordinates _)
+                = rotate (angle coordinates) $ line [(0,0), (0, 100)]
+--GlobalSystem | CoordinateSystem {parent :: CoordinateSystem, zeroLocation :: Place,
+--                                        velocity :: Velocity, orientation :: Orientation, rotation :: Rotation}
 
-angle orientation = -radToDeg (argV pt)
-                    where acted = orientVector orientation (makevect 1.0 0 0)
+angle coordinates = radToDeg (argV pt)
+                    where acted = globalOrientation coordinates (makevect 1.0 0 0)
                           pt = (double2Float (xcoord acted), double2Float(zcoord acted))
 
 drawAction                              :: ForceAction -> Picture
@@ -66,18 +68,19 @@ instance DrawableForce BouncingGround where
 
 
 instance Drawable RigidCraft where
-    draw craft@(RigidCraft parts placeState (RotationState orientation _) ground)
+    draw craft@(RigidCraft parts coordinates ground)
             = pictures ([drawRelativeToCraft craft $ pictures (drawCenter craft:map draw parts)]
-                        ++ [drawVelocity placeState]
+                        ++ [drawVelocity (globalState coordinates (atrest, origin))]
                         ++ map (color red . drawAction) (partsActions (Tick 1.0) craft))
 
-drawVelocity (PlaceState place velocity)
+drawVelocity (place, velocity)
             = color blue $ drawVector place velocity
 
 
 drawRelativeToCraft         :: RigidCraft -> Picture -> Picture
-drawRelativeToCraft (RigidCraft parts (PlaceState place vel) (RotationState orientation _) ground) p
-    = translateD (xcoord place) (zcoord place) $ rotate (angle orientation) p
+drawRelativeToCraft (RigidCraft parts coordinates ground) p
+                            = translateD (xcoord place) (zcoord place) $ rotate (angle coordinates) p
+                              where place = globalPlace coordinates origin
 
 drawCenter craft        = line [(-10, -15), (0, 15), (10,-15), (-10,-15)]
 

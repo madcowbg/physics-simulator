@@ -21,7 +21,7 @@ module Physics.Primitives (
     Rotation (Rotation), Torque,
     MomentOfInertia,
     makevect,
-    vectorMulAdd,
+--    vectorMulAdd,
     vectorScale,
     vectorSum,
     xcoord,
@@ -39,12 +39,17 @@ module Physics.Primitives (
 --    angleZdeg
     CoordinateSystem (GlobalSystem, CoordinateSystem),
     globalPlace, localPlace,
+    localAccelleration,
     globalState, localState,
+    globalOrientation,
     ------
     Rotatable, twist,
     Movable, move,
     Accelleratable, accellerate,
     Torqueable, torque,
+    origin, atrest,
+    -------- possibly not ok?
+    setPlaceAndUpdateVelocity,
 ) where
 
 import Linear.V3
@@ -55,8 +60,11 @@ type Vector3        = V3 Double
 type Matrix33       = M33 Double
 
 
-data CoordinateSystem = GlobalSystem | CoordinateSystem {parent :: CoordinateSystem, zeroLocation :: Place,
-                                        velocity :: Velocity, orientation :: Orientation, rotation :: Rotation}
+data CoordinateSystem = GlobalSystem | CoordinateSystem {parent :: CoordinateSystem,
+                                        zeroLocation :: Place, velocity :: Velocity, orientation :: Orientation, rotation :: Rotation}
+
+setPlaceAndUpdateVelocity   :: CoordinateSystem -> Place -> (Velocity -> Velocity) -> CoordinateSystem
+setPlaceAndUpdateVelocity system place fVel = system {zeroLocation = place, velocity = fVel (velocity system)}
 
 --instance Eq CoordinateSystem where
 --    --(==)        :: CoordinateSystem -> CoordinateSystem -> Bool
@@ -64,7 +72,6 @@ data CoordinateSystem = GlobalSystem | CoordinateSystem {parent :: CoordinateSys
 --    (==) GlobalSystem _ = False
 --    (==) _ GlobalSystem = False
 --    (==) (CoordinateSystem { parent = p1 }) (CoordinateSystem { parent = p2 }) = p1 == p2
-
 
 toParentPlace               :: CoordinateSystem -> Place -> Place
 toParentPlace GlobalSystem _= error "cannot find parent of global system"
@@ -78,10 +85,16 @@ globalPlace                 = unpeel parent toParentPlace
 localPlace                  :: CoordinateSystem -> Place -> Place
 localPlace                  = peel parent toChildPlace
 
+-- accelleration is just rotated
+localAccelleration          :: CoordinateSystem -> Accelleration -> Accelleration
+localAccelleration          = peel parent (\system accel -> reverseOrientVector (orientation system) accel)
+
+globalOrientation          :: CoordinateSystem -> Place -> Place
+globalOrientation           = unpeel parent (\system orient -> reverseOrientVector (orientation system) orient)
+
 peel                        :: (CoordinateSystem -> CoordinateSystem) -> (CoordinateSystem -> a -> a) -> CoordinateSystem -> a -> a
 peel f g GlobalSystem val   = val
 peel f g system place       = g system (peel f g (f system) place)
-
 
 unpeel                      :: (CoordinateSystem -> CoordinateSystem) -> (CoordinateSystem -> a -> a) -> CoordinateSystem -> a -> a
 unpeel f g GlobalSystem val = val
@@ -104,7 +117,7 @@ localState                  :: CoordinateSystem -> (Place, Velocity) -> (Place, 
 localState                  = peel parent (\system pv -> (toChildPlace system (fst pv), toChildVelocity system (fst pv) (snd pv)))
 
 -- TODO write in analytic form
-deltaNumericalApprox = 0.001
+deltaNumericalApprox = 0.01
 calcRotationVelocity            :: Place -> Orientation -> Rotation -> Velocity
 calcRotationVelocity place systemOrientation systemRotation
                                 = vectorScale (orientVector deltaRotation place - orientVector systemOrientation place) (1/deltaNumericalApprox)
@@ -155,6 +168,8 @@ type MomentOfInertia= Rotation
 type Torque         = Rotation
 
 makevect            = V3
+origin              = makevect 0.0 0.0 0.0
+atrest              = makevect 0.0 0.0 0.0
 
 vectorMulAdd        :: Vector3 -> Vector3 -> Double -> Vector3
 vectorMulAdd v1 v2 s = v1 + vectorScale v2 s

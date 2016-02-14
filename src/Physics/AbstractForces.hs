@@ -37,7 +37,7 @@ data ShockAction    = ShockAction Place (Velocity->Velocity) | NoShockAction
 
 data ForceChain = forall f. (Force f) => ForceChain {this :: f, next :: ForceChain } | ForceEnd
 
-actOnChain                      :: (PhysicalObj o) => ForceChain -> Tick -> Place -> Velocity -> o -> [ForceAction]
-actOnChain ForceEnd _ _ _ _      = []
-actOnChain (ForceChain this next) tick globalPlace globalVel obj
-                                = act this tick globalPlace globalVel obj:actOnChain next tick globalPlace globalVel obj
+actOnChain                      :: (PhysicalObj o) => ForceChain -> Tick -> (Place, Velocity) -> o -> [ForceAction]
+actOnChain ForceEnd _ _ _       = []
+actOnChain (ForceChain this next) tick globalState obj
+                                = uncurry (act this tick) globalState obj:actOnChain next tick globalState obj

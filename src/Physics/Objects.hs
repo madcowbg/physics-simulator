@@ -14,8 +14,8 @@
 {-# LANGUAGE ExistentialQuantification #-}
 
 module Physics.Objects (
-    Craft, craftPlace, craftRotation, craftMass, move, twist,
-    craftActions, executeForces, partsActions, craftMassCenter, momentOfInertia, relativeToCraft,
+    Craft, craftMass, move, twist,
+    craftActions, executeForces, partsActions, momentOfInertia, craftCoordinates,
     shockCraft
 
 ) where
@@ -29,14 +29,15 @@ class (Movable c, Rotatable c, ShockableObj c, Accelleratable c, Torqueable c) =
     craftMass           :: c -> Double
     momentOfInertia     :: c -> MomentOfInertia
 
-    craftMassCenter     :: c -> Place
-    craftPlace          :: c -> PlaceState
-    craftRotation       :: c -> RotationState
+    craftCoordinates    :: c -> CoordinateSystem
+    --craftMassCenter     :: c -> Place
+    --craftPlace          :: c -> PlaceState
+    --craftRotation       :: c -> RotationState
     partsActions        :: Tick -> c -> [ForceAction]
     craftActions        :: Tick -> c -> [ShockAction]
 
-    relativeToCraft     :: c -> Place -> Place
-    relativeToCraft c p  =  place (craftPlace c) + orientVector (orient (craftRotation c)) p
+    --relativeToCraft     :: c -> Place -> Place
+    --relativeToCraft c p  =  place (craftPlace c) + orientVector (orient (craftRotation c)) p
 
     executeForces       :: Tick -> c -> c
     executeForces t c           = executeActions (craftActions t c) (partsActions t c) c
@@ -47,7 +48,7 @@ executeActions      :: (Craft c) => [ShockAction] -> [ForceAction] -> c -> c
 executeActions shocks actions craft
                             = shockCraft shocks
                             $ accellerate (applyActions actions (craftMass craft))
-                            $ torque (aggregateTorque (map (toLocalView (craftPlace craft) (craftMassCenter craft) (craftRotation craft)) actions) (momentOfInertia craft) ) craft
+                            $ torque (aggregateTorque (map (localActions (craftCoordinates craft)) actions) (momentOfInertia craft) ) craft
 
 --aggregateAccelleration               :: [ShockAction] -> [ForceAction] -> Double -> Accelleration
 --aggregateAccelleration shocks actions mass
@@ -59,9 +60,12 @@ applyActions actions mass       = vectorSum (map (actionToAccelleration mass) ac
 actionToAccelleration             :: Double -> ForceAction -> Accelleration
 actionToAccelleration mass (ForceAction place forceAmt)  = vectorScale forceAmt (1 / mass)
 
-toLocalView         :: PlaceState -> Place -> RotationState -> ForceAction -> ForceAction
-toLocalView (PlaceState craftPlace _) craftMassCenter (RotationState orientation _) (ForceAction globalPlace forceAmt)
-                    = ForceAction (globalPlace - craftPlace - craftMassCenter) (reverseOrientVector orientation forceAmt)
+--toLocalView         :: PlaceState -> Place -> RotationState -> ForceAction -> ForceAction
+--toLocalView (PlaceState craftPlace _) craftMassCenter (RotationState orientation _) (ForceAction globalPlace forceAmt)
+--                    = ForceAction (globalPlace - craftPlace - craftMassCenter) (reverseOrientVector orientation forceAmt)
+localActions        :: CoordinateSystem -> ForceAction -> ForceAction
+localActions system (ForceAction globalPlace forceAmt)
+                    = ForceAction (localPlace system globalPlace) (localAccelleration system forceAmt)
 
 aggregateTorque     :: [ForceAction] -> MomentOfInertia -> Torque
 aggregateTorque forces mom =  torqueSum (map (`applyTorque` mom) forces)
