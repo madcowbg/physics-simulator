@@ -35,8 +35,11 @@ module Physics.Primitives (
     rotateOrientation,
     orientVector,
     reverseOrientVector,
-    torqueSum, calcTorque, calculateRotationIntertia
+    torqueSum, calcTorque, calculateRotationIntertia,
 --    angleZdeg
+    CoordinateSystem (GlobalSystem, CoordinateSystem),
+    globalPlace, localPlace,
+    globalState, localState
 ) where
 
 import Linear.V3
@@ -44,6 +47,64 @@ import Linear.Matrix
 
 type Vector3        = V3 Double
 type Matrix33       = M33 Double
+
+
+data CoordinateSystem = GlobalSystem | CoordinateSystem {parent :: CoordinateSystem, zeroLocation :: Place,
+                                        velocity :: Velocity, orientation :: Orientation, rotation :: Rotation}
+
+--instance Eq CoordinateSystem where
+--    --(==)        :: CoordinateSystem -> CoordinateSystem -> Bool
+--    (==) GlobalSystem GlobalSystem = True
+--    (==) GlobalSystem _ = False
+--    (==) _ GlobalSystem = False
+--    (==) (CoordinateSystem { parent = p1 }) (CoordinateSystem { parent = p2 }) = p1 == p2
+
+
+toParentPlace               :: CoordinateSystem -> Place -> Place
+toParentPlace GlobalSystem _= error "cannot find parent of global system"
+toParentPlace system place  = orientVector (orientation system) place + zeroLocation system
+
+toChildPlace system place   = reverseOrientVector (orientation system) (zeroLocation system - place)
+
+globalPlace                 :: CoordinateSystem -> Place -> Place
+globalPlace                 = unpeel parent toParentPlace
+
+localPlace                  :: CoordinateSystem -> Place -> Place
+localPlace                  = peel parent toChildPlace
+
+peel                        :: (CoordinateSystem -> CoordinateSystem) -> (CoordinateSystem -> a -> a) -> CoordinateSystem -> a -> a
+peel f g GlobalSystem val   = val
+peel f g system place       = g system (peel f g (f system) place)
+
+
+unpeel                      :: (CoordinateSystem -> CoordinateSystem) -> (CoordinateSystem -> a -> a) -> CoordinateSystem -> a -> a
+unpeel f g GlobalSystem val = val
+unpeel f g system val       = unpeel f g (f system) (g system val)
+
+toParentVelocity            :: CoordinateSystem -> Place -> Velocity -> Velocity
+toParentVelocity GlobalSystem _ _ = error "cannot find parent of global system"
+toParentVelocity system place vel
+                            = velocity system + vel + calcRotationVelocity place (orientation system) (rotation system)
+
+toChildVelocity             :: CoordinateSystem -> Place -> Velocity -> Velocity
+toChildVelocity GlobalSystem _ _ = error "cannot find parent of global system"
+toChildVelocity system place vel
+                            = vel - velocity system - calcRotationVelocity place (orientation system) (rotation system)
+
+globalState                 :: CoordinateSystem -> (Place, Velocity) -> (Place, Velocity)
+globalState                 = unpeel parent (\system pv -> (toParentPlace system (fst pv), toParentVelocity system (fst pv) (snd pv)))
+
+localState                  :: CoordinateSystem -> (Place, Velocity) -> (Place, Velocity)
+localState                  = peel parent (\system pv -> (toChildPlace system (fst pv), toChildVelocity system (fst pv) (snd pv)))
+
+-- TODO write in analytic form
+deltaNumericalApprox = 0.001
+calcRotationVelocity            :: Place -> Orientation -> Rotation -> Velocity
+calcRotationVelocity place systemOrientation systemRotation
+                                = vectorScale (orientVector deltaRotation place - orientVector systemOrientation place) (1/deltaNumericalApprox)
+                                  where deltaRotation = rotateOrientation systemOrientation systemRotation deltaNumericalApprox
+
+
 
 -- place & direction primitives
 type Place          = Vector3
