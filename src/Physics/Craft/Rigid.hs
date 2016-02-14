@@ -41,7 +41,7 @@ instance ShockableObj RigidCraft where
 
 instance Craft RigidCraft where
     craftMass craft             = sum (map objMass (parts craft))
-    craftMassCenter craft       =  sum (map (\obj -> vectorScale (objPlace obj) (objMass obj)) (parts craft))
+    craftMassCenter craft       =  sum (map (\obj -> vectorScale (objPlace obj) (objMass obj / craftMass craft)) (parts craft))
     craftPlace                  = placeState
     craftRotation               = rotationState
     momentOfInertia craft       = torqueSum (map (neededTorque (craftMassCenter craft)) (parts craft))
@@ -53,7 +53,7 @@ globalPosition      :: RigidCraft -> RigidPointObj -> Place
 globalPosition craft obj = objPlace craft + orientVector (orient (rotationState craft)) (objPlace obj)
 
 globalVelocity      :: RigidCraft -> RigidPointObj -> Tick -> Place
-globalVelocity craft obj tick = velocity (placeState craft) + calcRotationVelocity (objPlace obj) (rotationState craft) tick
+globalVelocity craft obj tick = velocity (placeState craft) + calcRotationVelocity (objPlace obj - craftMassCenter craft) (rotationState craft) tick
 
 
 -- TODO move to a more primitive import...
@@ -84,7 +84,7 @@ instance Movable RigidCraft where
 data RigidPointObj    = RigidPointObj {localPlace :: Place, mass :: Double, forces :: ForceChain}
 
 instance ShockableObj RigidPointObj where
-    objPlace            = localPlace
+    objPlace            = Physics.Craft.Rigid.localPlace
 
 instance PhysicalObj RigidPointObj where
     objMass             = mass

@@ -41,7 +41,8 @@ class (Movable c, Rotatable c, ShockableObj c, Accelleratable c, Torqueable c) =
 
 executeActions      :: (Craft c) => [ShockAction] -> [ForceAction] -> c -> c
 executeActions shocks actions craft
-                            = accellerate (aggregateAccelleration shocks actions (craftMass craft)) $ torque (aggregateTorque (map (toLocalView (craftPlace craft) (craftRotation craft)) actions) (craftMassCenter craft) (momentOfInertia craft) ) craft
+                            = accellerate (aggregateAccelleration shocks actions (craftMass craft))
+                            $ torque (aggregateTorque (map (toLocalView (craftPlace craft) (craftMassCenter craft) (craftRotation craft)) actions) (momentOfInertia craft) ) craft
 
 aggregateAccelleration               :: [ShockAction] -> [ForceAction] -> Double -> Velocity -> Velocity
 aggregateAccelleration shocks actions mass velocity
@@ -60,15 +61,15 @@ applyActions actions mass velocity = vectorSum (velocity:map (actionToAccellerat
 actionToAccelleration             :: Double -> ForceAction -> Accelleration
 actionToAccelleration mass (ForceAction place forceAmt)  = vectorScale forceAmt (1 / mass)
 
-toLocalView         :: PlaceState -> RotationState -> ForceAction -> ForceAction
-toLocalView (PlaceState craftPlace _) (RotationState orientation _) (ForceAction globalPlace forceAmt)
-                    = ForceAction (globalPlace-craftPlace) (reverseOrientVector orientation forceAmt)
+toLocalView         :: PlaceState -> Place -> RotationState -> ForceAction -> ForceAction
+toLocalView (PlaceState craftPlace _) craftMassCenter (RotationState orientation _) (ForceAction globalPlace forceAmt)
+                    = ForceAction (globalPlace - craftPlace - craftMassCenter) (reverseOrientVector orientation forceAmt)
 
-aggregateTorque     :: [ForceAction] -> Place -> MomentOfInertia -> Rotation -> Rotation
-aggregateTorque forces p mom rot =  torqueSum (rot:map (\f -> applyTorque f p mom) forces)
+aggregateTorque     :: [ForceAction] -> MomentOfInertia -> Rotation -> Rotation
+aggregateTorque forces mom rot =  torqueSum (rot:map (`applyTorque` mom) forces)
 
-applyTorque         :: ForceAction -> Place -> MomentOfInertia -> Torque
-applyTorque (ForceAction actionPlace forceAmt) place
-                    =  calcTorque forceAmt (actionPlace - place)
+applyTorque         :: ForceAction -> MomentOfInertia -> Torque
+applyTorque (ForceAction actionPlace forceAmt)
+                    =  calcTorque forceAmt actionPlace    -- must be -force, because of reasons?
 
 
