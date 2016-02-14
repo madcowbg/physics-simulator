@@ -49,6 +49,17 @@ instance Craft RigidCraft where
     partsActions t c            = concatMap (\p -> actOnChain (forces p) t (globalPosition c p) (globalVelocity c p t) p) (parts c)
     craftActions t c            = [shock (ground c) t (objPlace c) c]
 
+    shockCraft shocks craft     = craft { placeState = PlaceState (place (placeState craft)) (applyShocks shocks (velocity (placeState craft)))}
+
+--applyShocks shocks (
+applyShocks         :: [ShockAction] -> Velocity -> Velocity
+applyShocks         = foldr ((.) . applyShock) id
+
+applyShock                          :: ShockAction -> Velocity -> Velocity
+applyShock NoShockAction            = id
+applyShock (ShockAction place fun)  = fun
+
+
 globalPosition      :: RigidCraft -> RigidPointObj -> Place
 globalPosition craft obj = objPlace craft + orientVector (orient (rotationState craft)) (objPlace obj)
 

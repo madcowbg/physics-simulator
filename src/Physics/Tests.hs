@@ -34,7 +34,7 @@ createScene :: SmallWorld
 createScene = let gravity = Gravity (makevect 0 0 (-1)) 5--20
                   ground = BouncingGround 0
                   globalChain =  ForceChain gravity ForceEnd
-                  dragLeft  = AirResistance 4--4
+                  dragLeft  = AirResistance 0--4
                   dragTop  = AirResistance 0.2--4
                   dragRight  = AirResistance 0-- .2
                   placeState = PlaceState (makevect (-200) 0 200) (makevect 0 0 0) --(makevect 15 0 15)

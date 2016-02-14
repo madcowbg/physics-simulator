@@ -39,11 +39,17 @@ module Physics.Primitives (
 --    angleZdeg
     CoordinateSystem (GlobalSystem, CoordinateSystem),
     globalPlace, localPlace,
-    globalState, localState
+    globalState, localState,
+    ------
+    Rotatable, twist,
+    Movable, move,
+    Accelleratable, accellerate,
+    Torqueable, torque,
 ) where
 
 import Linear.V3
 import Linear.Matrix
+import Physics.Time
 
 type Vector3        = V3 Double
 type Matrix33       = M33 Double
@@ -103,6 +109,35 @@ calcRotationVelocity            :: Place -> Orientation -> Rotation -> Velocity
 calcRotationVelocity place systemOrientation systemRotation
                                 = vectorScale (orientVector deltaRotation place - orientVector systemOrientation place) (1/deltaNumericalApprox)
                                   where deltaRotation = rotateOrientation systemOrientation systemRotation deltaNumericalApprox
+
+
+class Movable m where
+    move                :: Tick -> m -> m
+
+class Accelleratable a where
+    accellerate         :: Accelleration -> a -> a
+
+class Rotatable r where
+    twist              :: Tick -> r -> r
+
+class Torqueable t where
+    torque              :: Torque -> t -> t
+
+
+instance Movable CoordinateSystem where
+    move (Tick s) system
+                        = system {zeroLocation = vectorMulAdd (zeroLocation system) (velocity system) s}
+
+instance Accelleratable CoordinateSystem where
+    accellerate accelleration system
+                        = system {velocity = velocity system + accelleration}
+
+instance Rotatable CoordinateSystem where
+    twist (Tick s) system
+                        = system {orientation = rotateOrientation (orientation system) (rotation system) s}
+
+instance Torqueable CoordinateSystem where
+    torque torque system= system {rotation = torqueSum [rotation system, torque]}
 
 
 
