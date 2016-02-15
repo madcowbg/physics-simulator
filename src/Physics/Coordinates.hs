@@ -55,25 +55,25 @@ toParentPlace system place  = orientVector (orientation system) place + zeroLoca
 toChildPlace system place   = reverseOrientVector (orientation system) (zeroLocation system - place)
 
 globalPlace                 :: CoordinateSystem -> Place -> Place
-globalPlace                 = unpeel parent toParentPlace
+globalPlace                 = toGlobal parent toParentPlace
 
 localPlace                  :: CoordinateSystem -> Place -> Place
-localPlace                  = peel parent toChildPlace
+localPlace                  = toLocal parent toChildPlace
 
 -- accelleration is just rotated
 localAccelleration          :: CoordinateSystem -> Accelleration -> Accelleration
-localAccelleration          = peel parent (\system accel -> reverseOrientVector (orientation system) accel)
+localAccelleration          = toLocal parent (\system accel -> reverseOrientVector (orientation system) accel)
 
 globalOrientation          :: CoordinateSystem -> Place -> Place
-globalOrientation           = unpeel parent (\system orient -> orientVector (orientation system) orient)
+globalOrientation           = toGlobal parent (\system orient -> orientVector (orientation system) orient)
 
-peel                        :: (CoordinateSystem -> CoordinateSystem) -> (CoordinateSystem -> a -> a) -> CoordinateSystem -> a -> a
-peel f g GlobalSystem val   = val
-peel f g system place       = g system (peel f g (f system) place)
+toLocal                        :: (CoordinateSystem -> CoordinateSystem) -> (CoordinateSystem -> a -> a) -> CoordinateSystem -> a -> a
+toLocal f g GlobalSystem val   = val
+toLocal f g system place       = g system (toLocal f g (f system) place)
 
-unpeel                      :: (CoordinateSystem -> CoordinateSystem) -> (CoordinateSystem -> a -> a) -> CoordinateSystem -> a -> a
-unpeel f g GlobalSystem val = val
-unpeel f g system val       = unpeel f g (f system) (g system val)
+toGlobal                      :: (CoordinateSystem -> CoordinateSystem) -> (CoordinateSystem -> a -> a) -> CoordinateSystem -> a -> a
+toGlobal f g GlobalSystem val = val
+toGlobal f g system val       = toGlobal f g (f system) (g system val)
 
 toParentVelocity            :: CoordinateSystem -> Place -> Velocity -> Velocity
 toParentVelocity GlobalSystem _ _ = error "cannot find parent of global system"
@@ -86,10 +86,10 @@ toChildVelocity system place vel
                             = vel - velocity system - calcRotationVelocity place (orientation system) (rotation system)
 
 globalState                 :: CoordinateSystem -> (Place, Velocity) -> (Place, Velocity)
-globalState                 = unpeel parent (\system pv -> (toParentPlace system (fst pv), toParentVelocity system (fst pv) (snd pv)))
+globalState                 = toGlobal parent (\system pv -> (toParentPlace system (fst pv), toParentVelocity system (fst pv) (snd pv)))
 
 localState                  :: CoordinateSystem -> (Place, Velocity) -> (Place, Velocity)
-localState                  = peel parent (\system pv -> (toChildPlace system (fst pv), toChildVelocity system (fst pv) (snd pv)))
+localState                  = toLocal parent (\system pv -> (toChildPlace system (fst pv), toChildVelocity system (fst pv) (snd pv)))
 
 -- TODO write in analytic form
 deltaNumericalApprox = 0.01
