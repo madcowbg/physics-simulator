@@ -19,8 +19,9 @@ module Physics.BasicDraw (
 import Linear.Matrix
 
 import Physics.Primitives
+import Physics.Coordinates
+import Physics.Elementary
 import Physics.Objects
-import Physics.AbstractObjects
 import Physics.Forces
 import Physics.AbstractForces
 import Physics.Time
@@ -43,8 +44,6 @@ instance Drawable SmallWorld where
 drawOrient      :: RigidCraft -> Picture
 drawOrient craft@(RigidCraft parts coordinates _)
                 = rotate (angle coordinates) $ line [(0,0), (0, 100)]
---GlobalSystem | CoordinateSystem {parent :: CoordinateSystem, zeroLocation :: Place,
---                                        velocity :: Velocity, orientation :: Orientation, rotation :: Rotation}
 
 angle coordinates = radToDeg (argV pt)
                     where acted = globalOrientation coordinates (makevect 1.0 0 0)
@@ -52,8 +51,6 @@ angle coordinates = radToDeg (argV pt)
 
 drawAction                              :: ForceAction -> Picture
 drawAction (ForceAction place forceAmt) = drawVector place forceAmt
-
---drawAction (ShockAction place _)        = drawCircle place 0.2 TODO draw craft shocks
 
 class DrawableForce f where
     drawForce       :: f -> Picture

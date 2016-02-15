@@ -18,12 +18,19 @@ module Physics.AbstractForces (
     ForceAction (ForceAction), actionAmt,
     ShockForce, shock,
     ShockAction (ShockAction, NoShockAction),
-    ForceChain (ForceChain, ForceEnd), actOnChain
+    ForceChain (ForceChain, ForceEnd), actOnChain,
+    ShockableObj, objPlace,
+    PhysicalObj, objMass,
 ) where
 
-import Physics.Primitives
-import Physics.AbstractObjects
+import Physics.Elementary
 import Physics.Time
+
+class ShockableObj o where
+    objPlace        :: o -> Place
+
+class (ShockableObj o) => PhysicalObj o where
+    objMass             :: o -> Double
 
 -- Forces
 class Force f where

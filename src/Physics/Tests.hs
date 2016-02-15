@@ -16,8 +16,8 @@ module Physics.Tests (
     runBasicDemo
 ) where
 
-import Physics.Primitives
-import Physics.AbstractObjects
+import Physics.Coordinates
+import Physics.Elementary
 import Physics.Objects
 import Physics.BasicScene
 import Physics.World
@@ -32,14 +32,14 @@ import Graphics.Gloss
 
 createScene :: SmallWorld
 createScene = let gravity = Gravity (makevect 0 0 (-1)) 5--20
-                  ground = BouncingGround 0
+                  ground = BouncingGround (-200)
                   globalChain =  ForceChain gravity ForceEnd
                   dragLeft  = AirResistance 0--4
                   dragTop  = AirResistance 0.2--4
                   dragRight  = AirResistance 4-- .2
                   leftPart = RigidPointObj (makevect (-10) 0 (-15)) 5 (ForceChain dragLeft globalChain)
                   rightPart = RigidPointObj (makevect 10 0 (-15)) 10 (ForceChain dragRight globalChain)
-                  topPart = RigidPointObj (makevect 0 0 (15)) 10 (ForceChain dragTop globalChain)
+                  topPart = RigidPointObj (makevect 0 0 15) 10 (ForceChain dragTop globalChain)
                   craftCoordinates = CoordinateSystem GlobalSystem (makevect (-200) 0 200) (makevect 0 0 0) identityOrient (Rotation 0 0 0)
               in SmallWorld [RigidCraft [leftPart, rightPart, topPart] craftCoordinates ground] ground
 

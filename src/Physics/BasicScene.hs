@@ -16,16 +16,8 @@ module Physics.BasicScene (
     update
 ) where
 
-
-import Physics.Primitives
-import Physics.Objects
-import Physics.Forces
-import Physics.Time
-import Physics.BasicDraw
 import Physics.World
 
-import Graphics.Gloss
-import Graphics.Gloss.Data.Color
 import Graphics.Gloss.Data.ViewPort
 
 import GHC.Float
