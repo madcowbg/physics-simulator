@@ -32,6 +32,7 @@ module Physics.Coordinates (
     --------
     aggregateTorque, calcTorque,
     calculateMomentOfIntertia,
+    calculateCenterMass,
     -------- possibly not ok?
     setPlaceAndUpdateVelocity,
 
@@ -64,7 +65,7 @@ localAccelleration          :: CoordinateSystem -> Accelleration -> Accelleratio
 localAccelleration          = peel parent (\system accel -> reverseOrientVector (orientation system) accel)
 
 globalOrientation          :: CoordinateSystem -> Place -> Place
-globalOrientation           = unpeel parent (\system orient -> reverseOrientVector (orientation system) orient)
+globalOrientation           = unpeel parent (\system orient -> orientVector (orientation system) orient)
 
 peel                        :: (CoordinateSystem -> CoordinateSystem) -> (CoordinateSystem -> a -> a) -> CoordinateSystem -> a -> a
 peel f g GlobalSystem val   = val
@@ -135,7 +136,8 @@ atrest              = makevect 0.0 0.0 0.0
 
 aggregateTorque     = torqueSum
 
-
+calculateCenterMass         :: [(Place, Double)] -> Double -> Place
+calculateCenterMass pts mass= vectorSum (map (\p -> vectorScale (fst p) (snd p / mass)) pts)
 
 calculateMomentOfIntertia   :: [(Place, Double)] -> MomentOfInertia
 calculateMomentOfIntertia massPoints = aggregateTorque (map neededTorque massPoints)

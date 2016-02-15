@@ -14,7 +14,8 @@
 
 module Physics.Craft.Rigid (
     RigidCraft (RigidCraft),
-    RigidPointObj (RigidPointObj)
+    RigidPointObj (RigidPointObj),
+    createRigid
 ) where
 import Physics.Elementary
 import Physics.Coordinates
@@ -35,6 +36,13 @@ import Physics.Objects
 
 ---------------------------
 data RigidCraft          = RigidCraft {parts :: [RigidPointObj], coordinates :: CoordinateSystem, ground :: BouncingGround}
+
+createRigid             :: [RigidPointObj] -> CoordinateSystem -> BouncingGround -> RigidCraft
+createRigid p c g       = centerRigid (RigidCraft p c g)
+
+centerRigid             :: RigidCraft -> RigidCraft
+centerRigid craft       = let massCenter = calculateCenterMass (map (\p -> (objPlace p, mass p)) (parts craft)) (craftMass craft)
+                            in craft {parts = map (\part -> part { place = place part - massCenter }) (parts craft)}
 
 instance ShockableObj RigidCraft where
     objPlace craft              = globalPlace (coordinates craft) origin
@@ -76,10 +84,10 @@ instance Rotatable RigidCraft where
 instance Movable RigidCraft where
     move tick craft         = craft { coordinates = move tick (coordinates craft)}
 
-data RigidPointObj    = RigidPointObj {localPlace :: Place, mass :: Double, forces :: ForceChain}
+data RigidPointObj    = RigidPointObj {place :: Place, mass :: Double, forces :: ForceChain}
 
 instance ShockableObj RigidPointObj where
-    objPlace            = Physics.Craft.Rigid.localPlace
+    objPlace            = place
 
 instance PhysicalObj RigidPointObj where
     objMass             = mass

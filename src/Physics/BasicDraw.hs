@@ -45,7 +45,7 @@ drawOrient      :: RigidCraft -> Picture
 drawOrient craft@(RigidCraft parts coordinates _)
                 = rotate (angle coordinates) $ line [(0,0), (0, 100)]
 
-angle coordinates = radToDeg (argV pt)
+angle coordinates = -radToDeg (argV pt)
                     where acted = globalOrientation coordinates (makevect 1.0 0 0)
                           pt = (double2Float (xcoord acted), double2Float(zcoord acted))
 
@@ -79,7 +79,10 @@ drawRelativeToCraft (RigidCraft parts coordinates ground) p
                             = translateD (xcoord place) (zcoord place) $ rotate (angle coordinates) p
                               where place = globalPlace coordinates origin
 
-drawCenter craft        = line [(-10, -15), (0, 15), (10,-15), (-10,-15)]
+drawCenter (RigidCraft parts _ _)
+                            = line (map ptCoord (parts ++ [head parts]))--[(-10, -15), (0, 15), (10,-15), (-10,-15)]
+
+ptCoord p = (double2Float $ xcoord (objPlace p), double2Float $ zcoord $ objPlace p)
 
 instance Drawable RigidPointObj where
     draw obj        = let place = objPlace obj
