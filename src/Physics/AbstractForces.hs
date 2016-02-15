@@ -24,6 +24,7 @@ module Physics.AbstractForces (
 ) where
 
 import Physics.Elementary
+import Physics.Coordinates
 import Physics.Time
 
 class ShockableObj o where
@@ -34,17 +35,17 @@ class (ShockableObj o) => PhysicalObj o where
 
 -- Forces
 class Force f where
-    act             :: (PhysicalObj o) => f -> Tick -> Place -> Velocity -> o -> ForceAction
+    act             :: (PhysicalObj o) => f -> Tick -> CoordinateSystem -> Place -> Velocity -> o -> ForceAction
 
 class ShockForce f where
-    shock           :: (ShockableObj o) => f -> Tick -> Place -> o -> ShockAction
+    shock           :: (ShockableObj o) => f -> Tick -> CoordinateSystem -> Place -> Velocity -> o -> ShockAction
 
 data ForceAction    = ForceAction {actionPlace :: Place, actionAmt :: ForceAmt}
 data ShockAction    = ShockAction Place (Velocity->Velocity) | NoShockAction
 
 data ForceChain = forall f. (Force f) => ForceChain {this :: f, next :: ForceChain } | ForceEnd
 
-actOnChain                      :: (PhysicalObj o) => ForceChain -> Tick -> (Place, Velocity) -> o -> [ForceAction]
-actOnChain ForceEnd _ _ _       = []
-actOnChain (ForceChain this next) tick globalState obj
-                                = uncurry (act this tick) globalState obj:actOnChain next tick globalState obj
+actOnChain                      :: (PhysicalObj o) => ForceChain -> Tick -> CoordinateSystem -> Place -> Velocity -> o -> [ForceAction]
+actOnChain ForceEnd _ _ _ _ _   = []
+actOnChain (ForceChain this next) tick system localPlace localVelocity obj
+                                = act this tick system localPlace localVelocity obj:actOnChain next tick system localPlace localVelocity obj

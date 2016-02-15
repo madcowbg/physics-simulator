@@ -24,17 +24,6 @@ import Physics.Time
 import Physics.Forces
 import Physics.Objects
 
---class (Craft c) => SteerableCraft c where
---     numControls :: c -> Int
---     applyControls :: [Command] -> c -> c
---
---type Command = Thruster -> Thruster
---
-----data Rocket = Rocket {masses :: [PhysicalObj], thrusters :: [Thrusters]
---data Thruster p = Thruster {obj :: RigidPointObj, thrust :: Orientation}
-
-
----------------------------
 data RigidCraft          = RigidCraft {parts :: [RigidPointObj], coordinates :: CoordinateSystem, ground :: BouncingGround}
 
 createRigid             :: [RigidPointObj] -> CoordinateSystem -> BouncingGround -> RigidCraft
@@ -51,8 +40,8 @@ instance Craft RigidCraft where
     craftMass craft             = sum (map objMass (parts craft))
     momentOfInertia craft       = calculateMomentOfIntertia (map (\p -> (objPlace p, mass p)) (parts craft))
 
-    partsActions t craft        = concatMap (\p -> actOnChain (forces p) t (globalState (coordinates craft) (objPlace p, atrest)) p) (parts craft)
-    craftActions t c            = [shock (ground c) t (objPlace c) c]
+    partsActions t craft        = concatMap (\p -> actOnChain (forces p) t (coordinates craft) (objPlace p) atrest p) (parts craft)
+    craftActions t craft        = [shock (ground craft) t (coordinates craft) origin atrest craft]
 
     shockCraft shocks craft     = craft { coordinates = coordinatesShock shocks (coordinates craft)}
     craftCoordinates            = coordinates
