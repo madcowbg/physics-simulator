@@ -18,11 +18,11 @@ module Physics.World (
 
 import Physics.Forces
 import Physics.Objects
-import Physics.Craft.Rigid
+import Physics.Craft.Rocket
 import Physics.AbstractForces
 import Physics.Time
 
-data SmallWorld = SmallWorld {crafts :: [RigidCraft], ground :: BouncingGround}
+data SmallWorld = SmallWorld {crafts :: [Rocket], ground :: BouncingGround}
 
 class World w where
     updateWorld          :: Double -> w -> w

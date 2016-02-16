@@ -28,11 +28,11 @@ class (Movable c, Rotatable c, ShockableObj c, Accelleratable c, Torqueable c) =
     momentOfInertia     :: c -> MomentOfInertia
 
     craftCoordinates    :: c -> CoordinateSystem
-    partsActions        :: Tick -> c -> [ForceAction]
-    craftActions        :: Tick -> c -> [ShockAction]
+    partsActions        :: c -> Tick -> [ForceAction]
+    craftActions        :: c -> Tick -> [ShockAction]
 
     executeForces       :: Tick -> c -> c
-    executeForces t c           = executeActions (craftActions t c) (partsActions t c) c
+    executeForces t c           = executeActions (craftActions c t) (partsActions c t) c
 
     shockCraft          :: [ShockAction] -> c -> c
 

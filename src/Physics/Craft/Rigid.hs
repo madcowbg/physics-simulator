@@ -40,8 +40,8 @@ instance Craft RigidCraft where
     craftMass craft             = sum (map objMass (parts craft))
     momentOfInertia craft       = calculateMomentOfIntertia (map (\p -> (objPlace p, mass p)) (parts craft))
 
-    partsActions t craft        = concatMap (\p -> actOnChain (forces p) t (coordinates craft) (objPlace p) atrest p) (parts craft)
-    craftActions t craft        = [shock (ground craft) t (coordinates craft) origin atrest craft]
+    partsActions craft t        = concatMap (\p -> actOnChain (forces p) t (coordinates craft) (objPlace p) atrest p) (parts craft)
+    craftActions craft t        = [shock (ground craft) t (coordinates craft) origin atrest craft]
 
     shockCraft shocks craft     = craft { coordinates = coordinatesShock shocks (coordinates craft)}
     craftCoordinates            = coordinates

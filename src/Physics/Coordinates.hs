@@ -15,7 +15,7 @@
 module Physics.Coordinates (
     CoordinateSystem (GlobalSystem, CoordinateSystem),
     globalPlace, localPlace,
-    localAccelleration,
+    localAccelleration, globalAccelleration,
     globalState, localState,
     globalOrientation,
     --------
@@ -63,6 +63,9 @@ localPlace                  = toLocal parent toChildPlace
 -- accelleration is just rotated
 localAccelleration          :: CoordinateSystem -> Accelleration -> Accelleration
 localAccelleration          = toLocal parent (\system accel -> reverseOrientVector (orientation system) accel)
+
+globalAccelleration         :: CoordinateSystem -> Accelleration -> Accelleration
+globalAccelleration         = toGlobal parent (\system accel -> orientVector (orientation system) accel)
 
 globalOrientation          :: CoordinateSystem -> Place -> Place
 globalOrientation           = toGlobal parent (\system orient -> orientVector (orientation system) orient)

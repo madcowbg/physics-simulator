@@ -27,6 +27,7 @@ import Physics.AbstractForces
 import Physics.Time
 import Physics.World
 import Physics.Craft.Rigid
+import Physics.Craft.Rocket
 
 import Graphics.Gloss
 import Graphics.Gloss.Data.Vector
@@ -39,10 +40,10 @@ class Drawable d where
     draw        :: d -> Picture
 
 instance Drawable SmallWorld where
-    draw (SmallWorld crafts ground) = pictures (drawForce ground:map (color blue . draw) crafts ++ map drawOrient crafts)
+    draw (SmallWorld crafts ground) = pictures (drawForce ground:map (color blue . draw) crafts ++ map (drawOrient . craftCoordinates) crafts)
 
-drawOrient      :: RigidCraft -> Picture
-drawOrient craft@(RigidCraft parts coordinates _)
+drawOrient      :: CoordinateSystem -> Picture
+drawOrient coordinates
                 = rotate (angle coordinates) $ line [(0,0), (0, 100)]
 
 angle coordinates = -radToDeg (argV pt)
@@ -64,11 +65,12 @@ instance DrawableForce BouncingGround where
                     = drawRectangle 0 (zlim-15) 1200 30
 
 
-instance Drawable RigidCraft where
-    draw craft@(RigidCraft parts coordinates ground)
+instance Drawable Rocket where
+    draw rocket@(Rocket craft@(RigidCraft parts coordinates ground) thrusters)
             = pictures ([drawRelativeToCraft craft $ pictures (drawCenter craft:map draw parts)]
                         ++ [drawVelocity (globalState coordinates (atrest, origin))]
-                        ++ map (color red . drawAction) (partsActions (Tick 1.0) craft))
+                        ++ map (color red . drawAction) (partsActions rocket (Tick 1.0 ))
+                        )-- ++ map (color (dark green) . drawAction)) (thrustActions rocket (Tick 1.0 ))
 
 drawVelocity (place, velocity)
             = color blue $ drawVector place velocity
