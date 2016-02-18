@@ -28,14 +28,17 @@ import Physics.Time
 data Rocket = Rocket {craft :: RigidCraft, thrusters :: [Thruster]}
 
 instance Craft Rocket where
-    craftMass                   = craftMass . craft
-    momentOfInertia             = momentOfInertia . craft
+    massiveParts                = massiveParts . craft -- TODO add thrusters
 
     partsActions rocket tick    = partsActions (craft rocket) tick ++ map (thrustAction tick rocket) (thrusters rocket)
     craftActions                = craftActions . craft
 
     shockCraft actions rocket   = rocket {craft = shockCraft actions (craft rocket)}
     craftCoordinates            = craftCoordinates . craft
+
+    moveParts rocket diff       = rocket {craft = moveParts (craft rocket) diff} -- TODO add thrusters
+    changeCoordinates rocket f  = rocket {craft = changeCoordinates (craft rocket) f}
+
 
 thrustAction                :: Tick -> Rocket -> Thruster -> ForceAction
 thrustAction tick rocket thruster    = act (force thruster) tick (craftCoordinates rocket) (forcePlace thruster) atrest thruster

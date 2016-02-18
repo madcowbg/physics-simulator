@@ -27,38 +27,23 @@ import Physics.Objects
 data RigidCraft          = RigidCraft {parts :: [RigidPointObj], coordinates :: CoordinateSystem, ground :: BouncingGround}
 
 createRigid             :: [RigidPointObj] -> CoordinateSystem -> BouncingGround -> RigidCraft
-createRigid p c g       = centerRigid (RigidCraft p c g)
+createRigid p c g       = centerCraft (RigidCraft p c g)
 
-centerRigid             :: RigidCraft -> RigidCraft
-centerRigid craft       = let massCenter = calculateCenterMass (map (\p -> (objPlace p, mass p)) (parts craft)) (craftMass craft)
-                            in craft {parts = map (\part -> part { place = place part - massCenter }) (parts craft)}
+
 
 instance ShockableObj RigidCraft where
     objPlace craft              = globalPlace (coordinates craft) origin
 
 instance Craft RigidCraft where
-    craftMass craft             = sum (map objMass (parts craft))
-    momentOfInertia craft       = calculateMomentOfIntertia (map (\p -> (objPlace p, mass p)) (parts craft))
+    massiveParts                = parts
 
-    partsActions craft t        = concatMap (\p -> actOnChain (forces p) t (coordinates craft) (objPlace p) atrest p) (parts craft)
     craftActions craft t        = [shock (ground craft) t (coordinates craft) origin atrest craft]
 
-    shockCraft shocks craft     = craft { coordinates = coordinatesShock shocks (coordinates craft)}
     craftCoordinates            = coordinates
 
-coordinatesShock                :: [ShockAction] -> CoordinateSystem -> CoordinateSystem
-coordinatesShock [] system      = system
-coordinatesShock actions@(NoShockAction:as) system
-                                = coordinatesShock as system
-coordinatesShock actions@(ShockAction place f:as) system
-                                = setPlaceAndUpdateVelocity system place (applyShocks actions)
+    moveParts craft diff        = craft {parts = map (moveRigidPointObj diff) (parts craft)}
+    changeCoordinates craft f   = craft {coordinates = f (coordinates craft)}
 
-applyShocks         :: [ShockAction] -> Velocity -> Velocity
-applyShocks         = foldr ((.) . applyShock) id
-
-applyShock                          :: ShockAction -> Velocity -> Velocity
-applyShock NoShockAction            = id
-applyShock (ShockAction place fun)  = fun
 
 
 instance Accelleratable RigidCraft where
@@ -73,12 +58,5 @@ instance Rotatable RigidCraft where
 instance Movable RigidCraft where
     move tick craft         = craft { coordinates = move tick (coordinates craft)}
 
-data RigidPointObj    = RigidPointObj {place :: Place, mass :: Double, forces :: ForceChain}
-
-instance ShockableObj RigidPointObj where
-    objPlace            = place
-
-instance PhysicalObj RigidPointObj where
-    objMass             = mass
 
 
