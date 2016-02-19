@@ -40,7 +40,7 @@ class Drawable d where
     draw        :: d -> Picture
 
 instance Drawable SmallWorld where
-    draw (SmallWorld crafts ground) = pictures (drawForce ground:map (color blue . draw) crafts ++ map (drawOrient . craftCoordinates) crafts)
+    draw (SmallWorld currentTime crafts ground controls) = pictures (drawForce ground:map (color blue . draw) crafts ++ map (drawOrient . craftCoordinates) crafts)
 
 drawOrient      :: CoordinateSystem -> Picture
 drawOrient coordinates

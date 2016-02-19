@@ -42,10 +42,20 @@ createScene = let gravity = Gravity (makevect 0 0 (-1)) 5--20
                   rightPart = RigidPointObj (makevect 10 0 (-15)) 10 (ForceChain dragRight globalChain)
                   topPart = RigidPointObj (makevect 0 0 15) 10 (ForceChain dragTop globalChain)
                   craft = createRigid [leftPart, rightPart, topPart] craftCoordinates ground
-                  thruster = Thruster (makevect (0.01) 0 (50)) (ThrusterForce {maxPower = 30, percentThrust = 0.5, thrustDirection = makevect 0 0 (-20)})
+                  thruster = Thruster 0.5 (makevect (0.0) 0 (50)) (ThrusterForce {maxPower = 30, thrustDirection = makevect 0 0 (-20)})
                   rocket = Rocket craft [thruster]
                   craftCoordinates = CoordinateSystem GlobalSystem (makevect (200) 0 (-180)) (makevect 0 0 0) identityOrient (Rotation 0 0 0)
-              in SmallWorld [rocket] ground
+                  firstStage = ControlState [Control 0.1]
+                  secondStage = ControlState [Control 1]
+                  thirdStage = ControlState [Control 0.15]
+                  endStage = ControlState [Control 0]
+                  controlSequence = [(2, firstStage), (6, secondStage), (10, thirdStage), (11, endStage)]
+                  controlStrategy = ControlStrategy controlSequence
+              in SmallWorld 0 [rocket] ground controlStrategy
+
+--data Control = Control {thrustLevel :: Double}
+--data ControlStrategy = ControlStrategy {controlSequence :: [(Double, ControlState)] } | NoStrategy
+--data ControlState = ControlState { thrustersState :: [Control]}
 
 window = InWindow "My Window" (800, 800) (0, 0)
 fps = 60
