@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 --
--- Module      :  Physics.Objects
+-- Module      :  Physics.Craft.Basic
 -- Copyright   :
 -- License     :  AllRightsReserved
 --
@@ -11,7 +11,8 @@
 -- |
 --
 -----------------------------------------------------------------------------
-module Physics.Objects (
+
+module Physics.Craft.Basic (
     Craft, craftMass, move, twist,
     craftActions, executeForces, partsActions, momentOfInertia, craftCoordinates,
     shockCraft, calculateMassCenter, massiveParts, moveParts, centerCraft, changeCoordinates,

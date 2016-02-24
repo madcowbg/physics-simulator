@@ -17,10 +17,11 @@ module Physics.World (
 ) where
 
 import Physics.Forces
-import Physics.Objects
+import Physics.Craft.Basic
 import Physics.Craft.Rocket
 import Physics.AbstractForces
 import Physics.Time
+import Physics.Control.Basic
 
 data SmallWorld = SmallWorld {currentTime :: Double, crafts :: [Rocket], ground :: BouncingGround, gravity :: Gravity, control :: ControlStrategy}
 

@@ -21,7 +21,7 @@ import Linear.Matrix
 import Physics.Primitives
 import Physics.Coordinates
 import Physics.Elementary
-import Physics.Objects
+import Physics.Craft.Basic
 import Physics.Forces
 import Physics.AbstractForces
 import Physics.Time

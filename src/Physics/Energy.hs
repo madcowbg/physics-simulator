@@ -22,7 +22,7 @@ import Physics.Coordinates
 import Physics.Elementary
 import Physics.AbstractForces
 import Physics.Forces
-import Physics.Objects
+import Physics.Craft.Basic
 import Physics.Craft.Rocket
 
 class PotentialForce f where

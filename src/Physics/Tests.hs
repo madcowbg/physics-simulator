@@ -18,7 +18,7 @@ module Physics.Tests (
 
 import Physics.Coordinates
 import Physics.Elementary
-import Physics.Objects
+import Physics.Craft.Basic
 import Physics.BasicScene
 import Physics.World
 import Physics.AbstractForces
@@ -26,6 +26,7 @@ import Physics.Forces
 import Physics.BasicDraw
 import Physics.Craft.Rigid
 import Physics.Craft.Rocket
+import Physics.Control.Basic
 
 -- for drawing
 import Graphics.Gloss
@@ -35,9 +36,9 @@ createScene :: SmallWorld
 createScene = let gravity = Gravity (makevect 0 0 (-1)) 5--20
                   ground = BouncingGround (-200)
                   globalChain =  ForceChain gravity ForceEnd
-                  dragLeft  = AirResistance 0--1--4
-                  dragTop  = AirResistance 0--4
-                  dragRight  = AirResistance 0--1-- .2
+                  dragLeft  = AirResistance 1--4
+                  dragTop  = AirResistance 4
+                  dragRight  = AirResistance 1-- .2
                   leftPart = RigidPointObj (makevect (-10) 0 (-15)) 5 (ForceChain dragLeft globalChain)
                   rightPart = RigidPointObj (makevect 10 0 (-15)) 10 (ForceChain dragRight globalChain)
                   topPart = RigidPointObj (makevect 0 0 15) 10 (ForceChain dragTop globalChain)

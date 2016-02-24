@@ -22,7 +22,7 @@ import Physics.Coordinates
 import Physics.AbstractForces
 import Physics.Time
 import Physics.Forces
-import Physics.Objects
+import Physics.Craft.Basic
 
 data RigidCraft          = RigidCraft {parts :: [RigidPointObj], coordinates :: CoordinateSystem, ground :: BouncingGround}
 
