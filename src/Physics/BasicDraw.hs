@@ -28,6 +28,7 @@ import Physics.Time
 import Physics.World
 import Physics.Craft.Rigid
 import Physics.Craft.Rocket
+import Physics.Energy
 
 import Graphics.Gloss
 import Graphics.Gloss.Data.Vector
@@ -35,12 +36,16 @@ import Graphics.Gloss.Geometry.Angle
 import Graphics.Gloss.Data.Color
 
 import GHC.Float
+import Numeric
 
 class Drawable d where
     draw        :: d -> Picture
 
 instance Drawable SmallWorld where
-    draw (SmallWorld currentTime crafts ground controls) = pictures (drawForce ground:map (color blue . draw) crafts ++ map (drawOrient . craftCoordinates) crafts)
+    draw (SmallWorld currentTime crafts ground gravity controls)
+                = pictures (drawForce ground:map (color blue . draw) crafts
+                        ++ map (drawOrient . craftCoordinates) crafts
+                        ++ map (drawEnergy gravity) crafts)
 
 drawOrient      :: CoordinateSystem -> Picture
 drawOrient coordinates
@@ -70,6 +75,7 @@ instance Drawable Rocket where
             = pictures ([drawRelativeToCraft craft $ pictures (drawCenter craft:map draw parts)]
                         ++ [drawVelocity (globalState coordinates (atrest, origin))]
                         ++ map (color red . drawAction) (partsActions rocket (Tick 1.0 ))
+                        ++ [drawCraftDescription coordinates]
                         )-- ++ map (color (dark green) . drawAction)) (thrustActions rocket (Tick 1.0 ))
 
 drawVelocity (place, velocity)
@@ -105,3 +111,24 @@ drawRectangle cx cy width height = translateD cx cy $ color (dark green) $ recta
 drawVector          :: Place -> Velocity -> Picture
 drawVector place vel = drawArrow (xcoord place) (zcoord place) (xcoord vel) (zcoord vel)
 
+textSize = 0.075
+
+drawCraftDescription :: CoordinateSystem -> Picture
+drawCraftDescription (CoordinateSystem _ location velocity _ _)
+                     = translate (-380) (-50) $ scale textSize textSize
+                        $ appendLine ("coordinates: (" ++ showFixed (xcoord location) ++ ", " ++ showFixed (zcoord location) ++ ") ")
+                        $ appendLine ("velocity: (" ++ showFixed (xcoord velocity) ++ ", " ++ showFixed (zcoord velocity) ++ ")") blank
+
+drawEnergy           :: Gravity -> Rocket -> Picture
+drawEnergy gravity rocket
+                    = translate (-380) (-100) $ scale textSize textSize
+                        $ appendLine ("potential energy: " ++ showFixed potential)
+                        $ appendLine ("kinetic energy: " ++ showFixed kinetic)
+                        $ appendLine ("potential energy: " ++ showFixed (potential + kinetic)) blank
+                    where potential = calcPotential gravity rocket
+                          kinetic = calcKinetic rocket
+
+showFixed f = showFFloat (Just 2) f ""
+
+appendLine        :: String -> Picture -> Picture
+appendLine txt picture = pictures [translate 0 (-150) picture, text txt]

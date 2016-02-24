@@ -13,7 +13,7 @@
 -----------------------------------------------------------------------------
 
 module Physics.Forces (
-    Gravity (Gravity),
+    Gravity (Gravity), gravityDirection, gravityConstant,
     BouncingGround (BouncingGround),
     StickingGround (StickingGround),
     AirResistance (AirResistance)
@@ -26,7 +26,7 @@ import Physics.Coordinates
 import Physics.AbstractForces
 import Physics.Time
 
-data Gravity = Gravity {accel :: Accelleration, gconst :: Double}
+data Gravity = Gravity {gravityDirection :: Accelleration, gravityConstant :: Double}
 
 instance Force Gravity where
     act force tick system localPlace localVelocity obj
@@ -34,7 +34,7 @@ instance Force Gravity where
                     where place = globalPlace system localPlace
 
 accellGravity              :: Gravity -> Tick -> Double -> ForceAmt
-accellGravity gravity (Tick s) mass = scaleForceAmt (accel gravity) (s * gconst gravity * mass)
+accellGravity gravity (Tick s) mass = scaleForceAmt (gravityDirection gravity) (s * gravityConstant gravity * mass)
 
 data BouncingGround = BouncingGround {zlim :: Double}
 instance ShockForce BouncingGround where

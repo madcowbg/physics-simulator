@@ -22,7 +22,7 @@ import Physics.Craft.Rocket
 import Physics.AbstractForces
 import Physics.Time
 
-data SmallWorld = SmallWorld {currentTime :: Double, crafts :: [Rocket], ground :: BouncingGround, control :: ControlStrategy}
+data SmallWorld = SmallWorld {currentTime :: Double, crafts :: [Rocket], ground :: BouncingGround, gravity :: Gravity, control :: ControlStrategy}
 
 class World w where
     updateWorld         :: Double -> w -> w
@@ -38,7 +38,7 @@ instance World SmallWorld where
 
 
 executeStrategy         :: Tick -> SmallWorld -> SmallWorld
-executeStrategy tick@(Tick t) world@(SmallWorld _ _ _ NoStrategy)
+executeStrategy tick@(Tick t) world@(SmallWorld {control = NoStrategy})
                         = world
 executeStrategy tick@(Tick t) world
                         | null (controlSequence (control world))

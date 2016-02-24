@@ -28,7 +28,7 @@ module Physics.Primitives (
     rotateOrientation,
     vectorSum,
     vectorMulAdd,
-
+    vdot,
     --------
     torqueSum, calcTorque, calculateRotationIntertia,
 

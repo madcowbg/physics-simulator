@@ -35,7 +35,7 @@ module Physics.Coordinates (
     calculateCenterMass,
     -------- possibly not ok?
     setPlaceAndUpdateVelocity,
-
+    scalarProduct,
 ) where
 
 import Physics.Primitives
@@ -89,10 +89,10 @@ toChildVelocity system place vel
                             = vel - velocity system - calcRotationVelocity place (orientation system) (rotation system)
 
 globalState                 :: CoordinateSystem -> (Place, Velocity) -> (Place, Velocity)
-globalState                 = toGlobal parent (\system pv -> (toParentPlace system (fst pv), toParentVelocity system (fst pv) (snd pv)))
+globalState                 = toGlobal parent (\system pv -> (toParentPlace system (fst pv), uncurry (toParentVelocity system) pv))
 
 localState                  :: CoordinateSystem -> (Place, Velocity) -> (Place, Velocity)
-localState                  = toLocal parent (\system pv -> (toChildPlace system (fst pv), toChildVelocity system (fst pv) (snd pv)))
+localState                  = toLocal parent (\system pv -> (toChildPlace system (fst pv), uncurry (toChildVelocity system) pv))
 
 -- TODO write in analytic form
 deltaNumericalApprox = 0.01
@@ -133,6 +133,8 @@ instance Torqueable CoordinateSystem where
 sumForceAmt         = vectorSum
 scaleForceAmt       = vectorScale
 scaleAccelleration  = vectorScale
+
+scalarProduct       = vdot
 
 origin              = makevect 0.0 0.0 0.0
 atrest              = makevect 0.0 0.0 0.0

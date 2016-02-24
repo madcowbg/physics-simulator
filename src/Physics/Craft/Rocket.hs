@@ -13,7 +13,7 @@
 -----------------------------------------------------------------------------
 
 module Physics.Craft.Rocket (
-    Rocket (Rocket),
+    Rocket (Rocket), hull, rocketThrusters,
     Thruster (Thruster),
     ThrusterForce (ThrusterForce), maxPower, percentThrust, thrustDirection,
     Control (Control),
@@ -29,19 +29,19 @@ import Physics.AbstractForces
 import Physics.Time
 
 
-data Rocket = Rocket {craft :: RigidCraft, rocketThrusters :: [Thruster]}
+data Rocket = Rocket {hull :: RigidCraft, rocketThrusters :: [Thruster]}
 
 instance Craft Rocket where
-    massiveParts                = massiveParts . craft -- TODO add thrusters
+    massiveParts                = massiveParts . hull -- TODO add thrusters
 
-    partsActions rocket tick    = partsActions (craft rocket) tick ++ map (thrustAction tick rocket) (thrusters rocket)
-    craftActions                = craftActions . craft
+    partsActions rocket tick    = partsActions (hull rocket) tick ++ map (thrustAction tick rocket) (thrusters rocket)
+    craftActions                = craftActions . hull
 
-    shockCraft actions rocket   = rocket {craft = shockCraft actions (craft rocket)}
-    craftCoordinates            = craftCoordinates . craft
+    shockCraft actions rocket   = rocket {hull = shockCraft actions (hull rocket)}
+    craftCoordinates            = craftCoordinates . hull
 
-    moveParts rocket diff       = rocket {craft = moveParts (craft rocket) diff, rocketThrusters = map (moveThruster diff) (rocketThrusters rocket)} -- TODO add thrusters
-    changeCoordinates rocket f  = rocket {craft = changeCoordinates (craft rocket) f}
+    moveParts rocket diff       = rocket {hull = moveParts (hull rocket) diff, rocketThrusters = map (moveThruster diff) (rocketThrusters rocket)} -- TODO add thrusters
+    changeCoordinates rocket f  = rocket {hull = changeCoordinates (hull rocket) f}
 
 
 thrustAction                :: Tick -> Rocket -> Thruster -> ForceAction
@@ -66,25 +66,25 @@ actThrust force (Tick s) coordinates localPlace localVel thruster
                           (scaleForceAmt (globalAccelleration coordinates (thrustDirection force)) (-s * maxPower force * percentThrust thruster))
 
 instance Accelleratable Rocket where
-    accellerate f rocket    = rocket { craft = accellerate f (craft rocket)}
+    accellerate f rocket    = rocket { hull = accellerate f (hull rocket)}
 
 instance Torqueable Rocket where
-    torque f rocket         = rocket { craft = torque f (craft rocket)}
+    torque f rocket         = rocket { hull = torque f (hull rocket)}
 
 instance Rotatable Rocket where
-    twist tick rocket       = rocket { craft = twist tick (craft rocket)}
+    twist tick rocket       = rocket { hull = twist tick (hull rocket)}
 
 instance Movable Rocket where
-    move tick rocket        = rocket { craft = move tick (craft rocket)}
+    move tick rocket        = rocket { hull = move tick (hull rocket)}
 
 instance ShockableObj Rocket where
-    objPlace rocket         = objPlace (craft rocket)
+    objPlace rocket         = objPlace (hull rocket)
 
 
 class (Craft cc) => ControlledCraft cc where
      thrusters              :: cc -> [Thruster]
      currentControls        :: cc -> [Control]
-     currentControls craft  = map (Control . percentThrust) (thrusters craft)
+     currentControls hull  = map (Control . percentThrust) (thrusters hull)
 
      applyControls          :: cc -> [Control] -> cc
 
