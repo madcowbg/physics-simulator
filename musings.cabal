@@ -20,7 +20,8 @@ executable musings
         vector -any,
         linear -any,
         gloss -any,
-        mtl -any
+        mtl -any,
+        deepseq
     cc-options: -O3
     default-language: Haskell2010
     extra-libraries:

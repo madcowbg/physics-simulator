@@ -12,7 +12,7 @@
 --
 -----------------------------------------------------------------------------
 module Physics.World (
-    SmallWorld (SmallWorld),
+    SmallWorld (SmallWorld), crafts, craftControl,
     World, updateWorld, runTime, runForces
 ) where
 
@@ -23,7 +23,7 @@ import Physics.AbstractForces
 import Physics.Time
 import Physics.Control.Basic
 
-data SmallWorld = SmallWorld {currentTime :: Double, crafts :: [Rocket], ground :: BouncingGround, gravity :: Gravity, control :: ControlStrategy}
+data SmallWorld = SmallWorld {currentTime :: Double, crafts :: [Rocket], ground :: BouncingGround, gravity :: Gravity, craftControl :: ControlStrategy}
 
 class World w where
     updateWorld         :: Double -> w -> w
@@ -39,15 +39,15 @@ instance World SmallWorld where
 
 
 executeStrategy         :: Tick -> SmallWorld -> SmallWorld
-executeStrategy tick@(Tick t) world@(SmallWorld {control = NoStrategy})
+executeStrategy tick@(Tick t) world@(SmallWorld {craftControl = NoStrategy})
                         = world
 executeStrategy tick@(Tick t) world
-                        | null (controlSequence (control world))
+                        | null (controlSequence (craftControl world))
                                                     = world
-                        | fst (head (controlSequence (control world))) <= currentTime world
-                                                   = executeStrategy tick (world { control = skipFirstControl (control world)})
-                        | otherwise                = world {crafts = [steerCraft (snd $ head $ controlSequence $ control world) (head $ crafts world)]}
+                        | fst (head (controlSequence (craftControl world))) <= currentTime world
+                                                   = executeStrategy tick (world { craftControl = skipFirstControl (craftControl world)})
+                        | otherwise                = world {crafts = [steerCraft (snd $ head $ controlSequence $ craftControl world) (head $ crafts world)]}
 
 skipFirstControl        :: ControlStrategy -> ControlStrategy
-skipFirstControl control= control {controlSequence = tail (controlSequence control)}
+skipFirstControl craftControl= craftControl {controlSequence = tail (controlSequence craftControl)}
 

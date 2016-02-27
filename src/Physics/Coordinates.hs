@@ -28,7 +28,7 @@ module Physics.Coordinates (
     sumForceAmt,
     scaleForceAmt,
     scaleAccelleration,
-
+    distance,
     --------
     aggregateTorque, calcTorque,
     calculateMomentOfIntertia,
@@ -135,6 +135,8 @@ scaleForceAmt       = vectorScale
 scaleAccelleration  = vectorScale
 
 scalarProduct       = vdot
+
+distance            = vectorLength
 
 origin              = makevect 0.0 0.0 0.0
 atrest              = makevect 0.0 0.0 0.0

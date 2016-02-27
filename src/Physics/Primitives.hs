@@ -29,6 +29,7 @@ module Physics.Primitives (
     vectorSum,
     vectorMulAdd,
     vdot,
+    vectorLength,
     --------
     torqueSum, calcTorque, calculateRotationIntertia,
 
@@ -49,6 +50,9 @@ vectorScale v1 s    = fmap (* s) v1
 
 vectorSum           :: [Vector3] -> Vector3
 vectorSum           = foldr (+) (makevect 0 0 0)
+
+vectorLength        :: Vector3 -> Double
+vectorLength vec    = sqrt (vdot vec vec)
 
 vdot                :: Vector3 -> Vector3 -> Double
 vdot (V3 x y z) (V3 sx sy sz) = x*sx + y*sy + z*sz

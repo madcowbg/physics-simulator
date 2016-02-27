@@ -24,7 +24,8 @@ module Swarm.Types (
     updateParticleBest,
     updateParticleSpeed,
     solutionParticle,
-    showParticle
+    showParticle,
+    particleCoords
 ) where
 
 import Data.List
@@ -136,4 +137,5 @@ updateParticleSpeed pref rng (Particle crds eval lbest gbest)
 showParticle            :: Particle Float Float -> String
 showParticle part       = "" ++ show (currentVal part) ++ ", pos=" ++ show (pos (coords part)) ++ ", vel=" ++ show (vel (coords part)) ++ "."
 
-
+particleCoords          :: Particle Double Double -> [Double]
+particleCoords particle = V.toList (pos (coords particle))
