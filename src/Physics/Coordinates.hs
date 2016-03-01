@@ -30,8 +30,11 @@ module Physics.Coordinates (
     scaleAccelleration,
     distance,
     --------
-    aggregateTorque, calcTorque,
-    calculateMomentOfIntertia,
+    calcTorque,
+    calculateAngularAcceleration,
+    --aggregateTorque, calcTorque,
+    --calculateMomentOfIntertia,
+    calculateIntertiaMatrix,
     calculateCenterMass,
     -------- possibly not ok?
     setPlaceAndUpdateVelocity,
@@ -43,7 +46,7 @@ import Physics.Elementary
 import Physics.Time
 
 data CoordinateSystem = GlobalSystem | CoordinateSystem {parent :: CoordinateSystem,
-                                        zeroLocation :: Place, velocity :: Velocity, orientation :: Orientation, rotation :: Rotation}
+                                        zeroLocation :: Place, velocity :: Velocity, orientation :: Orientation, rotation :: AngularVelocity}
 
 setPlaceAndUpdateVelocity   :: CoordinateSystem -> Place -> (Velocity -> Velocity) -> CoordinateSystem
 setPlaceAndUpdateVelocity system place fVel = system {zeroLocation = place, velocity = fVel (velocity system)}
@@ -80,27 +83,32 @@ toGlobal f g system val       = toGlobal f g (f system) (g system val)
 
 toParentVelocity            :: CoordinateSystem -> Place -> Velocity -> Velocity
 toParentVelocity GlobalSystem _ _ = error "cannot find parent of global system"
-toParentVelocity system place vel
-                            = velocity system + vel + calcRotationVelocity place (orientation system) (rotation system)
+toParentVelocity system localPlace localVel
+                            = localVel + velocity system
+                              + orientVector (orientation system) (cross localPlace (rotation system)) 
 
 toChildVelocity             :: CoordinateSystem -> Place -> Velocity -> Velocity
 toChildVelocity GlobalSystem _ _ = error "cannot find parent of global system"
-toChildVelocity system place vel
-                            = vel - velocity system - calcRotationVelocity place (orientation system) (rotation system)
+toChildVelocity system childPlace parentVel
+                            = parentVel - velocity system
+                              - orientVector (orientation system)(cross childPlace (rotation system))
 
 globalState                 :: CoordinateSystem -> (Place, Velocity) -> (Place, Velocity)
-globalState                 = toGlobal parent (\system pv -> (toParentPlace system (fst pv), uncurry (toParentVelocity system) pv))
+globalState                 = toGlobal parent toParentState
+
+toParentState               :: CoordinateSystem -> (Place, Velocity) -> (Place, Velocity)
+toParentState system (localPlace, localVelocity)
+                            = let parentPlace = toParentPlace system localPlace
+                              in (parentPlace, toParentVelocity system localPlace localVelocity)
+
 
 localState                  :: CoordinateSystem -> (Place, Velocity) -> (Place, Velocity)
-localState                  = toLocal parent (\system pv -> (toChildPlace system (fst pv), uncurry (toChildVelocity system) pv))
+localState                  = toLocal parent toChildState
 
--- TODO write in analytic form
-deltaNumericalApprox = 0.01
-calcRotationVelocity            :: Place -> Orientation -> Rotation -> Velocity
-calcRotationVelocity place systemOrientation systemRotation
-                                = vectorScale (orientVector deltaRotation place - orientVector systemOrientation place) (1/deltaNumericalApprox)
-                                  where deltaRotation = rotateOrientation systemOrientation systemRotation deltaNumericalApprox
-
+toChildState                :: CoordinateSystem -> (Place, Velocity) -> (Place, Velocity)
+toChildState system (parentPlace, parentVelocity)
+                            = let childPlace = toChildPlace system parentPlace
+                              in (childPlace, toChildVelocity system childPlace parentVelocity)
 
 class Movable m where
     move                :: Tick -> m -> m
@@ -112,7 +120,7 @@ class Rotatable r where
     twist              :: Tick -> r -> r
 
 class Torqueable t where
-    torque              :: Torque -> t -> t
+    torque              :: AngularAcceleration -> t -> t
 
 
 instance Movable CoordinateSystem where
@@ -128,7 +136,8 @@ instance Rotatable CoordinateSystem where
                         = system {orientation = rotateOrientation (orientation system) (rotation system) s}
 
 instance Torqueable CoordinateSystem where
-    torque torque system= system {rotation = aggregateTorque [rotation system, torque]}
+    torque angularAcceleration system
+                        = system {rotation = rotation system + angularAcceleration}
 
 sumForceAmt         = vectorSum
 scaleForceAmt       = vectorScale
@@ -141,15 +150,11 @@ distance            = vectorLength
 origin              = makevect 0.0 0.0 0.0
 atrest              = makevect 0.0 0.0 0.0
 
-aggregateTorque     = torqueSum
-
 calculateCenterMass         :: [(Place, Double)] -> Double -> Place
 calculateCenterMass pts mass= vectorSum (map (\p -> vectorScale (fst p) (snd p / mass)) pts)
 
-calculateMomentOfIntertia   :: [(Place, Double)] -> MomentOfInertia
-calculateMomentOfIntertia massPoints = aggregateTorque (map neededTorque massPoints)
+calculateIntertiaMatrix   :: [(Place, Double)] -> InertiaMatrix
+calculateIntertiaMatrix massPoints = sum (map inertiaMatrixComponent massPoints)
 
-neededTorque        :: (Place, Double) -> Torque
-neededTorque (placePart, massPart)
-                    = calculateRotationIntertia direction massPart
-                    where direction = placePart
+calcTorque         :: Place -> ForceAmt -> AngularAcceleration
+calcTorque          = cross

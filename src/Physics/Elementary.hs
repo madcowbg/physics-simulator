@@ -18,10 +18,14 @@ module Physics.Elementary (
     Accelleration,
     ForceAmt,
     Orientation,
-    Rotation (Rotation), Torque,
-    MomentOfInertia,
+    --Rotation (Rotation), Torque,
+    InertiaMatrix,
     makevect,
     identityOrient,
+    AngularVelocity,
+    AngularAcceleration,
+    RotationMatrix,
+    Torque
 ) where
 
 import Linear.V3
@@ -39,9 +43,12 @@ type ForceAmt       = Vector3
 
 type Orientation    = Matrix33
 
-data Rotation       = Rotation {xEffect, yEffect, zEffect :: Double}
-type MomentOfInertia= Rotation
-type Torque         = Rotation
+type Torque         = Vector3
+type RotationMatrix = Matrix33
+type InertiaMatrix  = Matrix33
+type AngularVelocity= Vector3
+type AngularAcceleration
+                    = Vector3
 
 makevect            = V3
 

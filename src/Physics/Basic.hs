@@ -89,12 +89,6 @@ type Vector3        = V3 Float
 vectorMulAdd        :: Vector3 -> Vector3 -> Float -> Vector3
 vectorMulAdd v1 v2 s = v1 + fmap (* s) v2
 
-
---instance (Change Orientation) Rotation where
---actOn            :: Acceleration
---actOn            = -- TODO math stuff
-
-
 createScene :: Scene
 createScene = let placeState = State (V3 0 0 100) (V3 3 0 15) 1
                   rotState   = State (Orientation (V3 0 0 1)) (Rotation (V3 0.1 0 0.1) 0) (const 1)

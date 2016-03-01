@@ -37,30 +37,49 @@ import GHC.Float
 import System.Random
 import Data.Random.Normal
 
-createScene :: StdGen -> SmallWorld
-createScene stdGen
-            = let gravity = Gravity (makevect 0 0 (-1)) 5--20
-                  ground = BouncingGround (-200)
-                  globalChain =  ForceChain gravity ForceEnd
-                  dragLeft  = AirResistance 0--4
-                  dragTop  = AirResistance 0--2--4
-                  dragRight  = AirResistance 0-- .2
-                  leftPart = RigidPointObj (makevect (-10) 0 (-15)) 5 (ForceChain dragLeft globalChain)
-                  rightPart = RigidPointObj (makevect 10 0 (-15)) 10 (ForceChain dragRight globalChain)
-                  topPart = RigidPointObj (makevect 0 0 15) 10 (ForceChain dragTop globalChain)
-                  craft = createRigid [leftPart, rightPart, topPart] craftCoordinates ground
-                  leftThruster = Thruster 0.5 (makevect (0.01) 0 (-10)) ThrusterForce {maxPower = 10, thrustDirection = makevect 0 0 (20)}
-                  rightThruster = Thruster 0.5 (makevect (-0.01) 0 (-10)) ThrusterForce {maxPower = 10, thrustDirection = makevect 0 0 (-20)}
-                  leftRCS = Thruster 0.5 (makevect (0) 0 (50)) ThrusterForce {maxPower = 5, thrustDirection = makevect (-1) 0 0}
-                  rightRCS = Thruster 0.5 (makevect (0) 0 (50)) ThrusterForce {maxPower = 5, thrustDirection = makevect 1 0 0}
+
+gravity = Gravity (makevect 0 0 (-1)) 5--20
+ground = BouncingGround (-200)
+globalChain =  ForceChain gravity ForceEnd
+dragLeft  = AirResistance 0--4
+dragTop  = AirResistance 0--2--4
+dragRight  = AirResistance 0-- .2
+leftPart = RigidPointObj (makevect (-10) 0 (-15)) 5 (ForceChain dragLeft globalChain)
+rightPart = RigidPointObj (makevect 10 0 (-15)) 10 (ForceChain dragRight globalChain)
+topPart = RigidPointObj (makevect 0 0 15) 10 (ForceChain dragTop globalChain)
+
+craftZeroCoordinates = CoordinateSystem GlobalSystem (makevect (200) 0 (100)) (makevect 0 0 0) identityOrient (makevect 0 0 0)
+craft = createRigid [leftPart, rightPart, topPart] craftZeroCoordinates ground
+
+symmRocket  :: Rocket
+symmRocket  = let
                   topSymm = Thruster 0.5 (makevect 0 0 0) ThrusterForce {maxPower = 10, thrustDirection = makevect 0 0 (20)}
                   bottomSymm = Thruster 0.5 (makevect 0 0 0) ThrusterForce {maxPower = 10, thrustDirection = makevect 0 0 (-20)}
                   leftSymm = Thruster 0.5 (makevect 0 0 0) ThrusterForce {maxPower = 50, thrustDirection = makevect (-1) 0 0}
                   rightSymm = Thruster 0.5 (makevect 0 0 0) ThrusterForce {maxPower = 50, thrustDirection = makevect 1 0 0}
-                  --rocket = Rocket craft [leftThruster, rightThruster]
-                  --rocket = Rocket craft [leftThruster, rightThruster, leftRCS, rightRCS]
-                  rocket = Rocket craft [topSymm, bottomSymm, leftSymm, rightSymm]
-                  craftCoordinates = CoordinateSystem GlobalSystem (makevect (200) 0 (-180)) (makevect 0 0 0) identityOrient (Rotation 0 0 0)
+              in Rocket craft [topSymm, bottomSymm, leftSymm, rightSymm]
+
+asymmRocket :: Rocket
+asymmRocket = let
+                  leftThruster = Thruster 0.5 (makevect (0.01) 0 (-10)) ThrusterForce {maxPower = 10, thrustDirection = makevect 0 0 (20)}
+                  rightThruster = Thruster 0.5 (makevect (-0.01) 0 (-10)) ThrusterForce {maxPower = 10, thrustDirection = makevect 0 0 (-20)}
+                  leftRCS = Thruster 0.5 (makevect (0) 0 (50)) ThrusterForce {maxPower = 5, thrustDirection = makevect (-1) 0 0}
+                  rightRCS = Thruster 0.5 (makevect (0) 0 (50)) ThrusterForce {maxPower = 5, thrustDirection = makevect 1 0 0}
+              in Rocket craft [leftThruster, rightThruster, leftRCS, rightRCS]
+
+simpRocket :: Rocket
+simpRocket  = let
+                  leftThruster = Thruster 0.5 (makevect (0.01) 0 (-10)) ThrusterForce {maxPower = 10, thrustDirection = makevect 0 0 (20)}
+                  rightThruster = Thruster 0.5 (makevect (-0.01) 0 (-10)) ThrusterForce {maxPower = 10, thrustDirection = makevect 0 0 (-20)}
+              in Rocket craft [leftThruster, rightThruster]
+
+passiveRocket :: Rocket
+passiveRocket  = Rocket craft []
+
+createScene :: StdGen -> SmallWorld
+createScene stdGen
+            = let 
+                  rocket = symmRocket
 --                  firstStage = ControlState [Control 0.1]
 --                  secondStage = ControlState [Control 1]
 --                  thirdStage = ControlState [Control 0.15]
@@ -93,5 +112,5 @@ controlledUpdate ups stdGen vp t world@(SmallWorld time _ _ _ _)
 runBasicDemo    :: IO()
 runBasicDemo    = do
                     stdGen <- getStdGen
-                    simulate window white fps (createScene stdGen) draw (controlledUpdate 1go stdGen)
+                    simulate window white fps (createScene stdGen) draw (controlledUpdate 1 stdGen)
 

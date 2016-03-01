@@ -75,7 +75,7 @@ instance Drawable Rocket where
             = pictures ([drawRelativeToCraft craft $ pictures (drawCenter craft:map draw parts)]
                         ++ [drawVelocity (globalState coordinates (atrest, origin))]
                         ++ map (color red . drawAction) (partsActions rocket (Tick 1.0 ))
-                        ++ [drawCraftDescription coordinates]
+                        ++ [drawCraftDescription coordinates (momentOfInertia rocket)]
                         )-- ++ map (color (dark green) . drawAction)) (thrustActions rocket (Tick 1.0 ))
 
 drawVelocity (place, velocity)
@@ -113,11 +113,16 @@ drawVector place vel = drawArrow (xcoord place) (zcoord place) (xcoord vel) (zco
 
 textSize = 0.075
 
-drawCraftDescription :: CoordinateSystem -> Picture
-drawCraftDescription (CoordinateSystem _ location velocity _ _)
-                     = translate (-380) (-50) $ scale textSize textSize
+drawCraftDescription :: CoordinateSystem -> InertiaMatrix -> Picture
+drawCraftDescription (CoordinateSystem _ location velocity _ angularVelocity) mom
+                     = translate (-380) (100) $ scale textSize textSize
                         $ appendLine ("coordinates: (" ++ showFixed (xcoord location) ++ ", " ++ showFixed (zcoord location) ++ ") ")
-                        $ appendLine ("velocity: (" ++ showFixed (xcoord velocity) ++ ", " ++ showFixed (zcoord velocity) ++ ")") blank
+                        $ appendLine ("velocity: (" ++ showFixed (xcoord velocity) ++ ", " ++ showFixed (zcoord velocity) ++ ")")
+                        $ appendLine ("3D coordinates: (" ++ showFixed (xcoord location) ++ ", " ++ showFixed (ycoord location) ++ ", " ++ showFixed (zcoord location) ++")")
+                        $ appendLine ("3D velocity: (" ++ showFixed (xcoord velocity) ++ ", " ++ showFixed (ycoord velocity) ++ ", " ++ showFixed (zcoord velocity) ++")")
+                        $ appendLine ("3D angularVelocity: (" ++ showFixed (xcoord angularVelocity) ++ ", " ++ showFixed (ycoord angularVelocity) ++ ", " ++ showFixed (zcoord angularVelocity) ++")")
+                        $ appendLine ("mominertia: " ++ showFixed (det33 mom))
+                        $ blank
 
 drawEnergy           :: Gravity -> Rocket -> Picture
 drawEnergy gravity rocket

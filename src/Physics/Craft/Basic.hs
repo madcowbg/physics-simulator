@@ -29,8 +29,8 @@ class (Movable c, Rotatable c, ShockableObj c, Accelleratable c, Torqueable c) =
 
     craftMass               :: c -> Double
     craftMass craft         = sum (map objMass (massiveParts craft))
-    momentOfInertia         :: c -> MomentOfInertia
-    momentOfInertia craft       = calculateMomentOfIntertia (map (\p -> (objPlace p, objMass p)) (massiveParts craft))
+    momentOfInertia         :: c -> InertiaMatrix
+    momentOfInertia craft       = calculateIntertiaMatrix (map (\p -> (objPlace p, objMass p)) (massiveParts craft))
 
     craftCoordinates    :: c -> CoordinateSystem
 
@@ -61,7 +61,8 @@ executeActions      :: (Craft c) => [ShockAction] -> [ForceAction] -> c -> c
 executeActions shocks actions craft
                             = shockCraft shocks
                             $ accellerate (applyActions actions (craftMass craft))
-                            $ torque (aggregateTorqueForce (map (localActions (craftCoordinates craft)) actions) (momentOfInertia craft) ) craft
+                            $ torque (aggregateTorqueForce actions (craftCoordinates craft) (momentOfInertia craft) )
+                            $ craft
 
 applyActions        :: [ForceAction] -> Double -> Accelleration
 applyActions actions mass       = sumForceAmt (map (actionToAccelleration mass) actions)
@@ -73,12 +74,17 @@ localActions        :: CoordinateSystem -> ForceAction -> ForceAction
 localActions system (ForceAction globalPlace forceAmt)
                     = ForceAction (localPlace system globalPlace) (localAccelleration system forceAmt)
 
-aggregateTorqueForce     :: [ForceAction] -> MomentOfInertia -> Torque
-aggregateTorqueForce forces mom =  aggregateTorque (map (`applyTorque` mom) forces)
+aggregateTorqueForce     :: [ForceAction] -> CoordinateSystem -> InertiaMatrix -> AngularAcceleration
+aggregateTorqueForce forces system inertiaMatrix
+                        = globalAccelleration system (calculateAngularAcceleration (aggregateLocalTorqueForce system forces) inertiaMatrix)
 
-applyTorque         :: ForceAction -> MomentOfInertia -> Torque
-applyTorque (ForceAction actionPlace forceAmt)
-                    =  calcTorque forceAmt actionPlace
+aggregateLocalTorqueForce:: CoordinateSystem -> [ForceAction] -> Torque
+aggregateLocalTorqueForce system forces
+                        = sum (map (calcForceTorque . localActions system) forces)
+
+calcForceTorque         :: ForceAction -> Torque
+calcForceTorque (ForceAction place amt)
+                        =   calcTorque place amt
 
 coordinatesShock                :: [ShockAction] -> CoordinateSystem -> CoordinateSystem
 coordinatesShock [] system      = system

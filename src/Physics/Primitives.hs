@@ -31,13 +31,16 @@ module Physics.Primitives (
     vdot,
     vectorLength,
     --------
-    torqueSum, calcTorque, calculateRotationIntertia,
-
+    crossAsMatrix,
+    inertiaMatrixComponent,
+    calculateAngularAcceleration,
+    cross,
 ) where
 
 import Physics.Elementary
 import Linear.V3
 import Linear.Matrix
+import Linear.Vector
 
 type Vector3        = V3 Double
 type Matrix33       = M33 Double
@@ -79,51 +82,43 @@ mirrorZpos (V3 px py pz) z  = V3 px py (z + (z-pz))
 stickZvel                  :: Velocity -> Velocity
 stickZvel (V3 x y z)       = V3 x y 0
 
+rodriguesFormula        :: Vector3 -> RotationMatrix
+rodriguesFormula v@(V3 x y z)   | theta == 0     = identityOrient
+                                | otherwise      = cos theta *!! identityOrient
+                                                    + (1-cos theta) *!! eeT e
+                                                    + sin theta *!! crossAsMatrix e 
+                                where theta = vectorLength v
+                                      e = vectorScale v (1/theta)
 
-rotateX             :: Double -> Matrix33
-rotateX angle       = V3 (V3 1          0                0)
-                         (V3 0 (cos angle) (- (sin angle)))
-                         (V3 0 (sin angle)     (cos angle))
+eeT                 :: Vector3 -> Matrix33
+eeT v@(V3 x y z)      = V3 (x*^v) (y*^v) (z*^v)
 
-rotateY             :: Double -> Matrix33
-rotateY angle       = V3 (V3     (cos angle) 0  (sin angle))
-                         (V3               0 1            0)
-                         (V3 (- (sin angle)) 0  (cos angle))
-
-rotateZ             :: Double -> Matrix33
-rotateZ angle       = V3 (V3  (cos angle) (- (sin angle)) 0)
-                         (V3  (sin angle)     (cos angle) 0)
-                         (V3            0               0 1)
-
-rotationOper            :: Rotation -> Double -> Orientation
-rotationOper (Rotation xEffect yEffect zEffect) s = rotateX xEffect !*! rotateY yEffect !*! rotateZ zEffect
-
-
-rotateOrientation       :: Orientation -> Rotation -> Double -> Orientation
-rotateOrientation orientation rotation s
-                        = rotationOper rotation s !*! orientation
+rotateOrientation       :: Orientation -> AngularVelocity -> Double -> Orientation
+rotateOrientation orientation angularVelocity s
+                        = rodriguesFormula (-s *^ angularVelocity) !*! orientation
 
 orientVector       :: Orientation -> Vector3 -> Vector3
 orientVector o v   = o !* v
 
 reverseOrientVector       :: Orientation -> Vector3 -> Vector3
-reverseOrientVector o v   = inv33 o !* v
+reverseOrientVector o v   = transpose o !* v
+
+crossAsMatrix         :: Vector3 -> Matrix33
+crossAsMatrix (V3 x y z)  = V3 (V3 0 (-z) y) (V3 z 0 (-x)) (V3 (-y) x 0)
+
+inertiaMatrixComponent  :: (Place, Double) -> InertiaMatrix
+inertiaMatrixComponent (place, mass)
+                    = (-mass) *!! (vcross !*! vcross)
+                        where vcross = crossAsMatrix place 
+
+calculateAngularAcceleration
+                    :: Torque -> InertiaMatrix -> AngularAcceleration
+calculateAngularAcceleration torque inertiaMatrix
+                    | torqueL == 0       = makevect 0 0 0
+                    | otherwise          = torque ^* (1 / momInertia)
+                    where torqueL = vectorLength torque
+                          unitDirection = torque ^* (1/torqueL)
+                          momInertia = vdot (unitDirection *! inertiaMatrix) unitDirection
 
 
-plus            :: Rotation -> Rotation -> Rotation
-plus (Rotation x y z) (Rotation sx sy sz) = Rotation (x+sx) (y+sy) (z+sz)
 
-torqueSum       :: [Torque] -> Torque
-torqueSum       = foldr plus (Rotation 0 0 0)
-
-calcTorque      :: Accelleration -> Place -> MomentOfInertia -> Torque
-calcTorque forceAmt directionVector
-                = asTorque (cross forceAmt directionVector)
-
-asTorque        :: Vector3 -> MomentOfInertia -> Torque
-asTorque (V3 x y z) (Rotation mx my mz)
-                = Rotation (x/mx) (y/my) (z/mz)
-
-calculateRotationIntertia :: Vector3 -> Double -> MomentOfInertia
-calculateRotationIntertia (V3 x y z) mass
-                = Rotation (mass * (y*y+z*z)) (mass*(x*x+z*z)) (mass*(x*x+y*y))
