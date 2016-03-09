@@ -46,8 +46,8 @@ instance Craft RigidCraft where
 
 
 
-instance Accelleratable RigidCraft where
-    accellerate f craft         = craft { coordinates = accellerate f (coordinates craft)}
+instance Acceleratable RigidCraft where
+    accelerate f craft         = craft { coordinates = accelerate f (coordinates craft)}
 
 instance Torqueable RigidCraft where
     torque f craft              = craft { coordinates = torque f (coordinates craft)}

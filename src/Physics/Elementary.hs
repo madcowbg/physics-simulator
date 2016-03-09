@@ -15,7 +15,7 @@
 module Physics.Elementary (
     Place,
     Velocity,
-    Accelleration,
+    Acceleration,
     ForceAmt,
     Orientation,
     --Rotation (Rotation), Torque,
@@ -38,7 +38,7 @@ type Matrix33       = M33 Double
 type Place          = Vector3
 type Velocity       = Vector3
 
-type Accelleration  = Vector3
+type Acceleration  = Vector3
 type ForceAmt       = Vector3
 
 type Orientation    = Matrix33

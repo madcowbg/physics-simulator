@@ -24,7 +24,7 @@ import Physics.Elementary
 import Physics.AbstractForces
 import Physics.Time
 
-class (Movable c, Rotatable c, ShockableObj c, Accelleratable c, Torqueable c) => Craft c where
+class (Movable c, Rotatable c, ShockableObj c, Acceleratable c, Torqueable c) => Craft c where
     massiveParts            :: c -> [RigidPointObj]
 
     craftMass               :: c -> Double
@@ -60,23 +60,23 @@ class (Movable c, Rotatable c, ShockableObj c, Accelleratable c, Torqueable c) =
 executeActions      :: (Craft c) => [ShockAction] -> [ForceAction] -> c -> c
 executeActions shocks actions craft
                             = shockCraft shocks
-                            $ accellerate (applyActions actions (craftMass craft))
+                            $ accelerate (applyActions actions (craftMass craft))
                             $ torque (aggregateTorqueForce actions (craftCoordinates craft) (momentOfInertia craft) )
                             $ craft
 
-applyActions        :: [ForceAction] -> Double -> Accelleration
+applyActions        :: [ForceAction] -> Double -> Acceleration
 applyActions actions mass       = sumForceAmt (map (actionToAccelleration mass) actions)
 
-actionToAccelleration             :: Double -> ForceAction -> Accelleration
+actionToAccelleration             :: Double -> ForceAction -> Acceleration
 actionToAccelleration mass (ForceAction place forceAmt)  = scaleAccelleration forceAmt (1 / mass)
 
 localActions        :: CoordinateSystem -> ForceAction -> ForceAction
 localActions system (ForceAction globalPlace forceAmt)
-                    = ForceAction (localPlace system globalPlace) (localAccelleration system forceAmt)
+                    = ForceAction (localPlace system globalPlace) (localAcceleration system forceAmt)
 
 aggregateTorqueForce     :: [ForceAction] -> CoordinateSystem -> InertiaMatrix -> AngularAcceleration
 aggregateTorqueForce forces system inertiaMatrix
-                        = globalAccelleration system (calculateAngularAcceleration (aggregateLocalTorqueForce system forces) inertiaMatrix)
+                        = globalAcceleration system (calculateAngularAcceleration (aggregateLocalTorqueForce system forces) inertiaMatrix)
 
 aggregateLocalTorqueForce:: CoordinateSystem -> [ForceAction] -> Torque
 aggregateLocalTorqueForce system forces

@@ -17,6 +17,7 @@ module Main (
 ) where
 
 import Test.DocTest
+import Test.HUnit
 
 main :: IO ()
 main = doctest ["-isrc", "src/Main.hs"]

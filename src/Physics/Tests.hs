@@ -37,6 +37,8 @@ import GHC.Float
 import System.Random
 import Data.Random.Normal
 
+import Physics.Planning.Linear
+
 
 gravity = Gravity (makevect 0 0 (-1)) 5--20
 ground = BouncingGround (-200)

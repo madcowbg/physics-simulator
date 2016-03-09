@@ -25,7 +25,7 @@ import Physics.Craft.Basic
 import Physics.Forces
 import Physics.AbstractForces
 import Physics.Time
-import Physics.World
+import Physics.World.Small
 import Physics.Craft.Rigid
 import Physics.Craft.Rocket
 import Physics.Energy

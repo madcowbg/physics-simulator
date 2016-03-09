@@ -30,6 +30,7 @@ module Physics.Primitives (
     vectorMulAdd,
     vdot,
     vectorLength,
+    vectorWithLength,
     --------
     crossAsMatrix,
     inertiaMatrixComponent,
@@ -120,5 +121,6 @@ calculateAngularAcceleration torque inertiaMatrix
                           unitDirection = torque ^* (1/torqueL)
                           momInertia = vdot (unitDirection *! inertiaMatrix) unitDirection
 
-
+vectorWithLength    :: Vector3 -> Double -> Vector3
+vectorWithLength col size = col ^* (size / vectorLength col)
 

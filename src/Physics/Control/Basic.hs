@@ -16,8 +16,6 @@ module Physics.Control.Basic (
     ControlledCraft, thrusters, currentControls, applyControls,
     Thruster(Thruster), moveThruster, actThrust, applyControl,
     Control (Control),
-    ControlStrategy (ControlStrategy,  NoStrategy), controlSequence,
-    ControlState (ControlState), steerCraft,
     ThrusterForce (ThrusterForce),
     -- TODO hide
     maxPower, percentThrust, thrustDirection,
@@ -60,10 +58,5 @@ applyControl control thruster
 
 
 data Control = Control {thrustLevel :: Double}
-data ControlStrategy = ControlStrategy {controlSequence :: [(Double, ControlState)] } | NoStrategy
-data ControlState = ControlState { thrustersState :: [Control]}
-
-steerCraft                  :: (ControlledCraft cc) => ControlState -> cc -> cc
-steerCraft state craft      = applyControls craft (thrustersState state)
 
 

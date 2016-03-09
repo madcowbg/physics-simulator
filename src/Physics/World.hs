@@ -21,7 +21,7 @@ import Physics.Craft.Basic
 import Physics.Craft.Rocket
 import Physics.AbstractForces
 import Physics.Time
-import Physics.Control.Basic
+import Physics.Control.Criteria
 
 data SmallWorld = SmallWorld {currentTime :: Double, crafts :: [Rocket], ground :: BouncingGround, gravity :: Gravity, craftControl :: ControlStrategy}
 

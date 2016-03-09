@@ -16,6 +16,8 @@ module Physics.Control.Criteria (
     CriterionW (CriterionW),
     Criterion (Criterion),
     findBestControls,
+    ControlStrategy (ControlStrategy,  NoStrategy), controlSequence,
+    ControlState (ControlState), steerCraft,
 ) where
 
 import Physics.Coordinates
@@ -36,6 +38,12 @@ import Calypso.Instance.PsoVect
 import Calypso.Instance.Grade
 import System.Random
 import Data.Random.Normal
+
+data ControlStrategy = ControlStrategy {controlSequence :: [(Double, ControlState)] } | NoStrategy
+data ControlState = ControlState { thrustersState :: [Control]}
+
+steerCraft                  :: (ControlledCraft cc) => ControlState -> cc -> cc
+steerCraft state craft      = applyControls craft (thrustersState state)
 
 -- | compares the place of the craft with the target place
 comparePlace            :: Craft c => c -> Place -> Double
@@ -76,43 +84,19 @@ attachControlsAndSimulate :: Double -> [Double] -> SmallWorld -> SmallWorld
 attachControlsAndSimulate time controls
                         = simulateWorld (Tick 0.025) time . attachControls controls
 
---findBestControls        :: StdGen -> Double -> Criterion -> SmallWorld -> ControlStrategy
---findBestControls _ time criterion world
---                    = arrayToSingleStepStrategy solution
---                      where ndim        = length (currentControls (head (crafts world)))
---                            bnd         = CoordBound 0 1
---                            optimFunc   = controlFitness criterion (attachControlsAndSimulate time) (head . crafts) world
---                            func        = filterOutsideRange optimFunc
---                            statetuple  = createBasicSwarm bnd ndim 50 func
---                            solution    = executeSwarm 10 statetuple func
 findBestControls        :: StdGen -> Double -> Criterion -> SmallWorld -> ControlStrategy
 findBestControls stdGen time criterion world
                     = arrayToSingleStepStrategy (toList solution)
-                      where ndim        = length (currentControls (head (crafts world)))
+                      where craftFun    = head . crafts
+                            ndim        = length (currentControls (craftFun world))
                             bnds        = (fromList (replicate ndim 0.0), fromList (replicate ndim 1.0))
-                            optimFunc   = controlFitness criterion (attachControlsAndSimulate time) (head . crafts) world
+                            optimFunc   = controlFitness criterion (attachControlsAndSimulate time) craftFun world
                             func        = filterOutsideRange optimFunc . toList
                             guide       = easyOptimize func bnds 10 stdGen
                             solution    = pt guide
-
---instance PsoList
 
 filterOutsideRange      :: ([Double] -> Double) -> [Double] -> Double
 filterOutsideRange fun v| any (< 0) v       = 100000000000
                         | any (> 1) v       = 100000000000
                         | otherwise         = fun v
 
---        let bnd        = CoordBound 0 1
---        let preferences = Preferences 0.3 1.4 1.4 2
---        let func = sumsq
---        let (swarm, rng) = createSwarm (RndList samples 0) (ArgSpace (replicate 2 bnd)) 50 func
-
---chainedControl      :: ControlledCraft c => Int -> Double -> c -> [Double] -> c
---chainedControl nsteps stepsize craft controls
-
---currentControls
-
-
---data ControlStrategy = ControlStrategy {controlSequence :: [(Double, ControlState)] } | NoStrategy
---data ControlState = ControlState { thrustersState :: [Control]}
---data Control = Control {thrustLevel :: Double}

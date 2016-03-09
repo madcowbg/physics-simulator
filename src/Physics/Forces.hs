@@ -26,7 +26,7 @@ import Physics.Coordinates
 import Physics.AbstractForces
 import Physics.Time
 
-data Gravity = Gravity {gravityDirection :: Accelleration, gravityConstant :: Double}
+data Gravity = Gravity {gravityDirection :: Acceleration, gravityConstant :: Double}
 
 instance Force Gravity where
     act force tick system localPlace localVelocity obj

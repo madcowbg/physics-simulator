@@ -15,13 +15,13 @@
 module Physics.Coordinates (
     CoordinateSystem (GlobalSystem, CoordinateSystem),
     globalPlace, localPlace,
-    localAccelleration, globalAccelleration,
+    localAcceleration, globalAcceleration,
     globalState, localState,
     globalOrientation,
     --------
     Rotatable, twist,
     Movable, move,
-    Accelleratable, accellerate,
+    Acceleratable, accelerate,
     Torqueable, torque,
     origin, atrest, identityOrient,
     --------
@@ -64,11 +64,11 @@ localPlace                  :: CoordinateSystem -> Place -> Place
 localPlace                  = toLocal parent toChildPlace
 
 -- accelleration is just rotated
-localAccelleration          :: CoordinateSystem -> Accelleration -> Accelleration
-localAccelleration          = toLocal parent (\system accel -> reverseOrientVector (orientation system) accel)
+localAcceleration          :: CoordinateSystem -> Acceleration -> Acceleration
+localAcceleration          = toLocal parent (\system accel -> reverseOrientVector (orientation system) accel)
 
-globalAccelleration         :: CoordinateSystem -> Accelleration -> Accelleration
-globalAccelleration         = toGlobal parent (\system accel -> orientVector (orientation system) accel)
+globalAcceleration         :: CoordinateSystem -> Acceleration -> Acceleration
+globalAcceleration         = toGlobal parent (\system accel -> orientVector (orientation system) accel)
 
 globalOrientation          :: CoordinateSystem -> Place -> Place
 globalOrientation           = toGlobal parent (\system orient -> orientVector (orientation system) orient)
@@ -113,8 +113,8 @@ toChildState system (parentPlace, parentVelocity)
 class Movable m where
     move                :: Tick -> m -> m
 
-class Accelleratable a where
-    accellerate         :: Accelleration -> a -> a
+class Acceleratable a where
+    accelerate         :: Acceleration -> a -> a
 
 class Rotatable r where
     twist              :: Tick -> r -> r
@@ -127,9 +127,9 @@ instance Movable CoordinateSystem where
     move (Tick s) system
                         = system {zeroLocation = vectorMulAdd (zeroLocation system) (velocity system) s}
 
-instance Accelleratable CoordinateSystem where
-    accellerate accelleration system
-                        = system {velocity = velocity system + accelleration}
+instance Acceleratable CoordinateSystem where
+    accelerate acceleration system
+                        = system {velocity = velocity system + acceleration}
 
 instance Rotatable CoordinateSystem where
     twist (Tick s) system
