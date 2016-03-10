@@ -34,7 +34,7 @@ instance Force Gravity where
                     where place = globalPlace system localPlace
 
 accellGravity              :: Gravity -> Tick -> Double -> ForceAmount
-accellGravity gravity (Tick s) mass = scaleForceAmt (gravityDirection gravity) (s * gravityConstant gravity * mass)
+accellGravity gravity (Tick s) mass = scaleForceAmount (gravityDirection gravity) (s * gravityConstant gravity * mass)
 
 data BouncingGround = BouncingGround {zlim :: Double}
 instance ShockForce BouncingGround where
@@ -55,5 +55,5 @@ instance ShockForce StickingGround where
 data AirResistance = AirResistance {drag :: Double}
 instance Force AirResistance where
     act (AirResistance drag) (Tick s) system localPlace localVelocity obj
-                    = ForceAction place (scaleForceAmt velocity (-1 * s * drag))
+                    = ForceAction place (scaleForceAmount velocity (-1 * s * drag))
                      where (place, velocity) = globalState system (localPlace, localVelocity)

@@ -42,7 +42,7 @@ data ThrusterForce = ThrusterForce {maxPower :: Double, thrustDirection :: Accel
 actThrust                   :: Tick -> CoordinateSystem -> Thruster -> Velocity -> ForceAction
 actThrust (Tick s) coordinates thruster localVel
                             = ForceAction (globalPlace coordinates (objPlace thruster))
-                          (scaleForceAmt (globalAcceleration coordinates (thrustDirection thrusterForce)) (-s * maxPower thrusterForce * percentThrust thruster))
+                          (scaleForceAmount (globalAcceleration coordinates (thrustDirection thrusterForce)) (-s * maxPower thrusterForce * percentThrust thruster))
                             where thrusterForce = force thruster
 
 class (Craft cc) => ControlledCraft cc where

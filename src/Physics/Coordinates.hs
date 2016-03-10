@@ -25,16 +25,12 @@ module Physics.Coordinates (
     Torqueable, changeAngularVelocity,
     origin, atrest, identityOrient,
     --------
-    sumForceAmt,
-    scaleForceAmt,
+    sumForcesAmount,
+    scaleForceAmount,
     scaleAccelleration,
     distance,
     --------
---    calcTorque,
---    calculateAngularAcceleration,
-    --aggregateTorque, calcTorque,
-    --calculateMomentOfIntertia,
-    calculateIntertiaMatrix,
+    calculateIntertiaTensor,
     calculateCenterMass,
     -------- possibly not ok?
     setPlaceAndUpdateVelocity,
@@ -90,14 +86,12 @@ toParentVelocity GlobalSystem _ _ = error "cannot find parent of global system"
 toParentVelocity system localPlace localVel
                             = localVel + velocity system
                               + orientVector (orientation system) (rotationVelocity (angularVelocity system) localPlace)
--- orientVector (orientation system) (cross localPlace (rotation system))
 
 toChildVelocity             :: CoordinateSystem -> Place -> Velocity -> Velocity
 toChildVelocity GlobalSystem _ _ = error "cannot find parent of global system"
 toChildVelocity system childPlace parentVel
                             = parentVel - velocity system
                               - orientVector (orientation system) (rotationVelocity (angularVelocity system) childPlace)
---                              orientVector (orientation system) (cross childPlace (rotation system))
 
 globalState                 :: CoordinateSystem -> (Place, Velocity) -> (Place, Velocity)
 globalState                 = toGlobal parent toParentState
@@ -144,13 +138,15 @@ instance Torqueable CoordinateSystem where
     changeAngularVelocity angularAcceleration system
                         = system {angularVelocity = integrateAngularVelocity (angularVelocity system) angularAcceleration}
 
-sumForceAmt         = vectorSum
-scaleForceAmt       = vectorScale
+sumForcesAmount     = vectorSum
+scaleForceAmount    = vectorScale
 scaleAccelleration  = vectorScale
 
-scalarProduct       = vdot
+scalarProduct       :: Vector3 -> Vector3 -> Double
+scalarProduct       = dot
 
-distance            = vectorLength
+distance            :: Vector3 -> Double
+distance            = norm
 
 origin              = makevect 0.0 0.0 0.0
 atrest              = makevect 0.0 0.0 0.0
@@ -158,6 +154,6 @@ atrest              = makevect 0.0 0.0 0.0
 calculateCenterMass         :: [(Place, Double)] -> Double -> Place
 calculateCenterMass pts mass= vectorSum (map (\p -> vectorScale (fst p) (snd p / mass)) pts)
 
-calculateIntertiaMatrix   :: [(Place, Double)] -> InertiaTensor
-calculateIntertiaMatrix massPoints = sum (map inertiaMatrixComponent massPoints)
+calculateIntertiaTensor   :: [(Place, Double)] -> InertiaTensor
+calculateIntertiaTensor massPoints = sum (map inertiaTensorComponent massPoints)
 

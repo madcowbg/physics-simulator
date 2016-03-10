@@ -13,7 +13,7 @@
 -----------------------------------------------------------------------------
 
 module Physics.Craft.Basic (
-    Craft, craftMass,
+    Craft,
     craftActions, executeForces, partsActions, inertiaTensor, craftCoordinates,
     shockCraft, calculateMassCenter, massiveParts, moveParts, centerCraft, changeCoordinates,
     RigidPointObj (RigidPointObj), moveRigidPointObj,
@@ -36,14 +36,11 @@ import Physics.Time
 class (Movable c, Rotatable c, ShockableObj c) => Craft c where
     massiveParts        :: c -> [RigidPointObj]
 
-    craftMass           :: c -> Double
-    craftMass craft     = sum (map objMass (massiveParts craft))
-
     mass                :: c -> Double
-    mass                = craftMass
+    mass craft          = sum (map objMass (massiveParts craft))
 
     inertiaTensor       :: c -> InertiaTensor
-    inertiaTensor craft = calculateIntertiaMatrix (map (\p -> (objPlace p, objMass p)) (massiveParts craft))
+    inertiaTensor craft = calculateIntertiaTensor (map (\p -> (objPlace p, objMass p)) (massiveParts craft))
 
     craftCoordinates    :: c -> CoordinateSystem
 
@@ -59,7 +56,7 @@ class (Movable c, Rotatable c, ShockableObj c) => Craft c where
     shockCraft shocks craft = changeCoordinates craft (coordinatesShock shocks)
 
     calculateMassCenter         :: c -> Place
-    calculateMassCenter craft       = calculateCenterMass (map (\p -> (objPlace p, objMass p)) (massiveParts craft)) (craftMass craft)
+    calculateMassCenter craft       = calculateCenterMass (map (\p -> (objPlace p, objMass p)) (massiveParts craft)) (mass craft)
 
     centerCraft         :: c -> c
     centerCraft craft   = moveParts craft (- calculateMassCenter craft)
@@ -75,9 +72,6 @@ executeActions shocks actions craft
                             = (shockCraft shocks . accelerate system aggregateForce . spin system aggregateTorque) craft
                               where (aggregateForce, aggregateTorque) = aggregateActions (map (localAction system) actions)
                                     system = craftCoordinates craft
---                            $ accelerate (applyActions actions (craftMass craft))
---                            $ torque (aggregateTorqueForce actions (craftCoordinates craft) (momentOfInertia craft) )
---                            $ craft
 
 accelerate          :: (Craft c) => CoordinateSystem -> ForceAmount -> c -> c
 accelerate system f c      = changeCoordinates c (changeVelocity (globalAcceleration system (asAcceleration f (mass c))))
@@ -87,10 +81,7 @@ spin system torque c     = changeCoordinates c (changeAngularVelocity (globalAcc
 
 aggregateActions    :: [ForceAction] -> (ForceAmount, Torque)
 aggregateActions actions
-                    = (sumForceAmt (map forceAmount actions), sumForceAmt (map forceTorque actions))
-
---applyActions        :: [ForceAction] -> Double -> Acceleration
---applyActions actions mass       = sumForceAmt (map (actionToAccelleration mass) actions)
+                    = (sumForcesAmount (map forceAmount actions), sumForcesAmount (map forceTorque actions))
 
 forceAmount         :: ForceAction -> ForceAmount
 forceAmount (ForceAction place forceAmt) = forceAmt
@@ -99,22 +90,9 @@ forceTorque         :: ForceAction -> Torque
 forceTorque (ForceAction place amt)
                         =  calcTorque amt place
 
-actionToAccelleration             :: Double -> ForceAction -> Acceleration
-actionToAccelleration mass (ForceAction place forceAmt)  = scaleAccelleration forceAmt (1 / mass)
-
 localAction         :: CoordinateSystem -> ForceAction -> ForceAction
 localAction system (ForceAction globalPlace forceAmt)
                     = ForceAction (localPlace system globalPlace) (localAcceleration system forceAmt)
---
---aggregateTorqueForce     :: [ForceAction] -> CoordinateSystem -> InertiaTensor -> Spin
---aggregateTorqueForce forces system inertiaMatrix
---                        = globalAcceleration system (calculateSpin (aggregateLocalTorqueForce system forces) inertiaMatrix)
---
---aggregateLocalTorqueForce:: CoordinateSystem -> [ForceAction] -> Torque
---aggregateLocalTorqueForce system forces
---                        = sum (map (calcForceTorque . localActions system) forces)
-
-
 
 coordinatesShock                :: [ShockAction] -> CoordinateSystem -> CoordinateSystem
 coordinatesShock [] system      = system

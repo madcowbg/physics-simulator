@@ -13,11 +13,11 @@
 -----------------------------------------------------------------------------
 
 module Physics.Elementary (
+    Vector3,
     Place,
     Velocity,
     Acceleration,
     ForceAmount,
-    --Rotation (Rotation), Torque,
     InertiaTensor,
     makevect,
     identityOrient,
@@ -52,9 +52,8 @@ type InertiaTensor  = Matrix33
 makevect            = V3
 
 identityOrient      :: Quaternion4
---identityOrient      = axisAngle (V3 1.0 0 0) 0 --coerceVersor (Quaternion 0 (V3 1 1 1))
 identityOrient      = coerceVersor (Quaternion 1 (V3 0 0 0))
 
 coerceVersor        :: Quaternion4 -> Quaternion4
 coerceVersor v@(Quaternion w vec)
-                    = v ^/ norm v-- Quaternion w (vec ^/ norm vec)
+                    = v ^/ norm v

@@ -43,7 +43,7 @@ import Physics.Planning.Linear
 gravity = Gravity (makevect 0 0 (-1)) 5--20
 ground = BouncingGround (-200)
 globalChain =  ForceChain gravity ForceEnd
-dragLeft  = AirResistance 10--4
+dragLeft  = AirResistance 0--4
 dragTop  = AirResistance 0--2--4
 dragRight  = AirResistance 0-- .2
 leftPart = RigidPointObj (makevect (-10) 0 (-15)) 5 (ForceChain dragLeft globalChain)
@@ -81,7 +81,7 @@ passiveRocket  = Rocket craft []
 createScene :: StdGen -> SmallWorld
 createScene stdGen
             = let
-                  rocket = passiveRocket
+                  rocket = symmRocket
 --                  firstStage = ControlState [Control 0.1]
 --                  secondStage = ControlState [Control 1]
 --                  thirdStage = ControlState [Control 0.15]
