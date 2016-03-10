@@ -19,10 +19,10 @@ module Physics.Coordinates (
     globalState, localState,
     globalOrientation,
     --------
-    Rotatable, twist,
-    Movable, move,
-    Acceleratable, accelerate,
-    Torqueable, torque,
+    Rotatable, changeOrientation,
+    Movable, changePosition,
+    Acceleratable, changeVelocity,
+    Torqueable, changeAngularVelocity,
     origin, atrest, identityOrient,
     --------
     sumForceAmt,
@@ -30,8 +30,8 @@ module Physics.Coordinates (
     scaleAccelleration,
     distance,
     --------
-    calcTorque,
-    calculateAngularAcceleration,
+--    calcTorque,
+--    calculateAngularAcceleration,
     --aggregateTorque, calcTorque,
     --calculateMomentOfIntertia,
     calculateIntertiaMatrix,
@@ -39,6 +39,10 @@ module Physics.Coordinates (
     -------- possibly not ok?
     setPlaceAndUpdateVelocity,
     scalarProduct,
+    ---------
+    asAcceleration,
+    asAngularAcceleration,
+    calcTorque,
 ) where
 
 import Physics.Primitives
@@ -46,7 +50,7 @@ import Physics.Elementary
 import Physics.Time
 
 data CoordinateSystem = GlobalSystem | CoordinateSystem {parent :: CoordinateSystem,
-                                        zeroLocation :: Place, velocity :: Velocity, orientation :: Orientation, rotation :: AngularVelocity}
+                                        zeroLocation :: Place, velocity :: Velocity, orientation :: Orientation, angularVelocity :: AngularVelocity}
 
 setPlaceAndUpdateVelocity   :: CoordinateSystem -> Place -> (Velocity -> Velocity) -> CoordinateSystem
 setPlaceAndUpdateVelocity system place fVel = system {zeroLocation = place, velocity = fVel (velocity system)}
@@ -85,13 +89,15 @@ toParentVelocity            :: CoordinateSystem -> Place -> Velocity -> Velocity
 toParentVelocity GlobalSystem _ _ = error "cannot find parent of global system"
 toParentVelocity system localPlace localVel
                             = localVel + velocity system
-                              + orientVector (orientation system) (cross localPlace (rotation system)) 
+                              + orientVector (orientation system) (rotationVelocity (angularVelocity system) localPlace)
+-- orientVector (orientation system) (cross localPlace (rotation system))
 
 toChildVelocity             :: CoordinateSystem -> Place -> Velocity -> Velocity
 toChildVelocity GlobalSystem _ _ = error "cannot find parent of global system"
 toChildVelocity system childPlace parentVel
                             = parentVel - velocity system
-                              - orientVector (orientation system)(cross childPlace (rotation system))
+                              - orientVector (orientation system) (rotationVelocity (angularVelocity system) childPlace)
+--                              orientVector (orientation system) (cross childPlace (rotation system))
 
 globalState                 :: CoordinateSystem -> (Place, Velocity) -> (Place, Velocity)
 globalState                 = toGlobal parent toParentState
@@ -111,33 +117,32 @@ toChildState system (parentPlace, parentVelocity)
                               in (childPlace, toChildVelocity system childPlace parentVelocity)
 
 class Movable m where
-    move                :: Tick -> m -> m
-
-class Acceleratable a where
-    accelerate         :: Acceleration -> a -> a
+    changePosition          :: Tick -> m -> m
 
 class Rotatable r where
-    twist              :: Tick -> r -> r
+    changeOrientation       :: Tick -> r -> r
+
+class Acceleratable a where
+    changeVelocity          :: Acceleration -> a -> a
 
 class Torqueable t where
-    torque              :: AngularAcceleration -> t -> t
-
+    changeAngularVelocity   :: AngularAcceleration -> t -> t
 
 instance Movable CoordinateSystem where
-    move (Tick s) system
-                        = system {zeroLocation = vectorMulAdd (zeroLocation system) (velocity system) s}
-
-instance Acceleratable CoordinateSystem where
-    accelerate acceleration system
-                        = system {velocity = velocity system + acceleration}
+    changePosition (Tick dt) system
+                        = system {zeroLocation = integratePosition (zeroLocation system) (velocity system) dt}
 
 instance Rotatable CoordinateSystem where
-    twist (Tick s) system
-                        = system {orientation = rotateOrientation (orientation system) (rotation system) s}
+    changeOrientation (Tick dt) system
+                        = system {orientation = integrateOrientation (orientation system) (angularVelocity system) dt}
+
+instance Acceleratable CoordinateSystem where
+    changeVelocity acceleration system
+                        = system {velocity = integrateVelocity (velocity system) acceleration}
 
 instance Torqueable CoordinateSystem where
-    torque angularAcceleration system
-                        = system {rotation = rotation system + angularAcceleration}
+    changeAngularVelocity angularAcceleration system
+                        = system {angularVelocity = integrateAngularVelocity (angularVelocity system) angularAcceleration}
 
 sumForceAmt         = vectorSum
 scaleForceAmt       = vectorScale
@@ -153,8 +158,6 @@ atrest              = makevect 0.0 0.0 0.0
 calculateCenterMass         :: [(Place, Double)] -> Double -> Place
 calculateCenterMass pts mass= vectorSum (map (\p -> vectorScale (fst p) (snd p / mass)) pts)
 
-calculateIntertiaMatrix   :: [(Place, Double)] -> InertiaMatrix
+calculateIntertiaMatrix   :: [(Place, Double)] -> InertiaTensor
 calculateIntertiaMatrix massPoints = sum (map inertiaMatrixComponent massPoints)
 
-calcTorque         :: Place -> ForceAmt -> AngularAcceleration
-calcTorque          = cross

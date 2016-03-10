@@ -45,18 +45,18 @@ instance Craft RigidCraft where
     changeCoordinates craft f   = craft {coordinates = f (coordinates craft)}
 
 
-
-instance Acceleratable RigidCraft where
-    accelerate f craft         = craft { coordinates = accelerate f (coordinates craft)}
-
-instance Torqueable RigidCraft where
-    torque f craft              = craft { coordinates = torque f (coordinates craft)}
+--
+--instance Acceleratable RigidCraft where
+--    changeVelocity f craft          = craft { coordinates = changeVelocity f (coordinates craft)}
+--
+--instance Torqueable RigidCraft where
+--    changeAngularVelocity f craft   = craft { coordinates = changeAngularVelocity f (coordinates craft)}
 
 instance Rotatable RigidCraft where
-    twist tick craft         = craft { coordinates = twist tick (coordinates craft)}
+    changeOrientation tick craft         = craft { coordinates = changeOrientation tick (coordinates craft)}
 
 instance Movable RigidCraft where
-    move tick craft         = craft { coordinates = move tick (coordinates craft)}
+    changePosition tick craft         = craft { coordinates = changePosition tick (coordinates craft)}
 
 
 

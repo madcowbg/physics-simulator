@@ -73,12 +73,19 @@ instance DrawableForce BouncingGround where
 instance Drawable Rocket where
     draw rocket@(Rocket craft@(RigidCraft parts coordinates ground) thrusters)
             = pictures ([drawRelativeToCraft craft $ pictures (drawCenter craft:map draw parts)]
-                        ++ [drawVelocity (globalState coordinates (atrest, origin))]
+                        ++ [drawVelocity craftPlace craftVel]
                         ++ map (color red . drawAction) (partsActions rocket (Tick 1.0 ))
-                        ++ [drawCraftDescription coordinates (momentOfInertia rocket)]
+                        ++ map (color green . drawLocalVelocities coordinates craftVel) parts
+                        ++ [drawCraftDescription coordinates (inertiaTensor rocket)]
                         )-- ++ map (color (dark green) . drawAction)) (thrustActions rocket (Tick 1.0 ))
+              where (craftPlace, craftVel) = globalState coordinates (origin, atrest)
 
-drawVelocity (place, velocity)
+drawLocalVelocities :: CoordinateSystem -> Velocity -> RigidPointObj -> Picture
+drawLocalVelocities system craftVel obj
+                    = let (place, vel) = globalState system (objPlace obj, atrest)
+                      in drawVector place (5 * (vel - craftVel))
+
+drawVelocity place velocity
             = color blue $ drawVector place velocity
 
 
@@ -113,7 +120,7 @@ drawVector place vel = drawArrow (xcoord place) (zcoord place) (xcoord vel) (zco
 
 textSize = 0.075
 
-drawCraftDescription :: CoordinateSystem -> InertiaMatrix -> Picture
+drawCraftDescription :: CoordinateSystem -> InertiaTensor -> Picture
 drawCraftDescription (CoordinateSystem _ location velocity _ angularVelocity) mom
                      = translate (-380) (100) $ scale textSize textSize
                         $ appendLine ("coordinates: (" ++ showFixed (xcoord location) ++ ", " ++ showFixed (zcoord location) ++ ") ")

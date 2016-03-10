@@ -37,7 +37,7 @@ data SmallWorld = SmallWorld {currentTime :: Double, crafts :: [Rocket], ground 
 
 instance World SmallWorld where
     runTime t@(Tick s) world
-                        = world {currentTime = currentTime world + s, crafts = map (twist t . move t) (crafts world)}
+                        = world {currentTime = currentTime world + s, crafts = map (changeOrientation t . changePosition t) (crafts world)}
     runForces t world   = world {crafts = map (executeForces t) (crafts world)}
     updateWorld time    = let t = Tick time in runTime t . runForces t . executeStrategy t
 
@@ -73,3 +73,7 @@ findBestControls stdGen time criterion world
                             guide       = easyOptimize func bnds 10 stdGen
                             solution    = pt guide
 
+filterOutsideRange      :: ([Double] -> Double) -> [Double] -> Double
+filterOutsideRange fun v| any (< 0) v       = 100000000000
+                        | any (> 1) v       = 100000000000
+                        | otherwise         = fun v

@@ -44,17 +44,17 @@ thrustAction                :: Tick -> Rocket -> Thruster -> ForceAction
 thrustAction tick rocket thruster    = actThrust tick (craftCoordinates rocket) thruster atrest
 
 
-instance Acceleratable Rocket where
-    accelerate f rocket    = rocket { hull = accelerate f (hull rocket)}
-
-instance Torqueable Rocket where
-    torque f rocket         = rocket { hull = torque f (hull rocket)}
+--instance Acceleratable Rocket where
+--    accelerate f rocket    = rocket { hull = accelerate f (hull rocket)}
+--
+--instance Torqueable Rocket where
+--    torque f rocket         = rocket { hull = torque f (hull rocket)}
 
 instance Rotatable Rocket where
-    twist tick rocket       = rocket { hull = twist tick (hull rocket)}
+    changeOrientation tick rocket       = rocket { hull = changeOrientation tick (hull rocket)}
 
 instance Movable Rocket where
-    move tick rocket        = rocket { hull = move tick (hull rocket)}
+    changePosition tick rocket        = rocket { hull = changePosition tick (hull rocket)}
 
 instance ShockableObj Rocket where
     objPlace rocket         = objPlace (hull rocket)

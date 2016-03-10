@@ -33,7 +33,7 @@ instance Force Gravity where
                     = ForceAction place (accellGravity force tick (objMass obj))
                     where place = globalPlace system localPlace
 
-accellGravity              :: Gravity -> Tick -> Double -> ForceAmt
+accellGravity              :: Gravity -> Tick -> Double -> ForceAmount
 accellGravity gravity (Tick s) mass = scaleForceAmt (gravityDirection gravity) (s * gravityConstant gravity * mass)
 
 data BouncingGround = BouncingGround {zlim :: Double}

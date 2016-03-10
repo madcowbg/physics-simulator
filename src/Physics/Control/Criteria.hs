@@ -15,9 +15,10 @@
 module Physics.Control.Criteria (
     CriterionW (CriterionW),
     Criterion (Criterion),
-    findBestControls,
     ControlStrategy (ControlStrategy,  NoStrategy), controlSequence,
     ControlState (ControlState), steerCraft,
+    simulateWorld, arrayToSingleStepStrategy, controlFitness
+
 ) where
 
 import Physics.Coordinates
@@ -27,7 +28,7 @@ import Physics.Control.Basic
 import Physics.Time
 
 -- TODO Move
-import Physics.World
+import Physics.World.Basic
 
 import Swarm.Settings
 import Swarm.Utils
@@ -76,27 +77,4 @@ arrayToSingleStepStrategy vals
                         = ControlStrategy controlSequence
                           where controlSequence = [(1000000, ControlState thrustersState)]
                                 thrustersState = map Control vals
-
-attachControls          :: [Double] -> SmallWorld -> SmallWorld
-attachControls controls world = world {craftControl = arrayToSingleStepStrategy controls}
-
-attachControlsAndSimulate :: Double -> [Double] -> SmallWorld -> SmallWorld
-attachControlsAndSimulate time controls
-                        = simulateWorld (Tick 0.025) time . attachControls controls
-
-findBestControls        :: StdGen -> Double -> Criterion -> SmallWorld -> ControlStrategy
-findBestControls stdGen time criterion world
-                    = arrayToSingleStepStrategy (toList solution)
-                      where craftFun    = head . crafts
-                            ndim        = length (currentControls (craftFun world))
-                            bnds        = (fromList (replicate ndim 0.0), fromList (replicate ndim 1.0))
-                            optimFunc   = controlFitness criterion (attachControlsAndSimulate time) craftFun world
-                            func        = filterOutsideRange optimFunc . toList
-                            guide       = easyOptimize func bnds 10 stdGen
-                            solution    = pt guide
-
-filterOutsideRange      :: ([Double] -> Double) -> [Double] -> Double
-filterOutsideRange fun v| any (< 0) v       = 100000000000
-                        | any (> 1) v       = 100000000000
-                        | otherwise         = fun v
 

@@ -40,7 +40,7 @@ class Force f where
 class ShockForce f where
     shock           :: (ShockableObj o) => f -> Tick -> CoordinateSystem -> Place -> Velocity -> o -> ShockAction
 
-data ForceAction    = ForceAction {actionPlace :: Place, actionAmt :: ForceAmt}
+data ForceAction    = ForceAction {actionPlace :: Place, actionAmt :: ForceAmount}
 data ShockAction    = ShockAction Place (Velocity->Velocity) | NoShockAction
 
 data ForceChain = forall f. (Force f) => ForceChain {this :: f, next :: ForceChain } | ForceEnd
