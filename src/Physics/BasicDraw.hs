@@ -90,27 +90,26 @@ drawOrbit system    = let
                         bodyCenter = makevect 0 0 (-bodyOffset)
                         (place, vel) = globalState system (origin, atrest)
                         orbit = fromStateToOrbit body (IState (place - bodyCenter) vel)
-                        arguments = map (\x -> _M orbit + x / 200.0 ) [-20..20]
+                        arguments = map (/ 1) [-20..20]
                         pts = map (fromOrbitToState body orbit) arguments
-                        centeredPts = map ((+ bodyCenter) . statePlace) pts
-                        currPt = (+ bodyCenter) . statePlace $ fromOrbitToState body orbit (_M orbit)
+                        centeredPts = map ((+ bodyCenter) . position) pts
+                        currPt = (+ bodyCenter) . position $ fromOrbitToState body orbit 0
                       in pictures [color (light blue) $ line (map ptPlaceCoord centeredPts),
                                  writeOrbitDescription orbit,
                                  translate (-380) (200) $ scale textSize textSize
-                                 $ appendLine ("coordinates: (" ++ showFixed (xcoord (head centeredPts)) ++ ", " ++ showFixed (ycoord (head centeredPts)) ++ ", "  ++ showFixed (zcoord (head centeredPts)) ++ ") ") blank,
+                                 $ appendLine ("behind pt: (" ++ showFixed (xcoord (head centeredPts)) ++ ", " ++ showFixed (ycoord (head centeredPts)) ++ ", "  ++ showFixed (zcoord (head centeredPts)) ++ ") ") blank,
                                  color red $ drawCircle currPt 5]
 
 writeOrbitDescription :: Orbit -> Picture
-writeOrbitDescription (Orbit _a _e _i _omega _Omega _nu _M _p)
+writeOrbitDescription (Orbit (OrbitalParams _a _e _i _omega _Omega) _nu _M)
                         =  translate (-380) (300) $ scale textSize textSize
                         $ appendLine ("_a = " ++ showFixed _a)
-                        $ appendLine ("_e = " ++ showFixed _e)
-                        $ appendLine ("_i = " ++ showFixed _i)
-                        $ appendLine ("_omega = " ++ showFixed _omega)
-                        $ appendLine ("_Omega = " ++ showFixed _Omega)
-                        $ appendLine ("_nu = " ++ showFixed _nu)
-                        $ appendLine ("_M = " ++ showFixed _M)
-                        $ appendLine ("_p = " ++ showFixed _p) blank
+                        $ appendLine ("_e = " ++ showFixedHighPrecision _e)
+                        $ appendLine ("_i = " ++ showFixedHighPrecision _i)
+                        $ appendLine ("_omega = " ++ showFixedHighPrecision _omega)
+                        $ appendLine ("_Omega = " ++ showFixedHighPrecision _Omega)
+                        $ appendLine ("_nu = " ++ showFixedHighPrecision _nu)
+                        $ appendLine ("_M = " ++ showFixedHighPrecision _M) blank
 
 drawLocalVelocities :: CoordinateSystem -> Velocity -> RigidPointObj -> Picture
 drawLocalVelocities system craftVel obj
@@ -174,6 +173,7 @@ drawEnergy gravity rocket
                           kinetic = calcKinetic rocket
 
 showFixed f = showFFloat (Just 2) f ""
+showFixedHighPrecision f = showFFloat (Just 10) f ""
 
 appendLine        :: String -> Picture -> Picture
 appendLine txt picture = pictures [translate 0 (-150) picture, text txt]
