@@ -38,6 +38,8 @@ import Graphics.Gloss.Data.Color
 import GHC.Float
 import Numeric
 
+import Physics.Orbit.Freefall
+
 class Drawable d where
     draw        :: d -> Picture
 
@@ -77,8 +79,38 @@ instance Drawable Rocket where
                         ++ map (color red . drawAction) (partsActions rocket (Tick 1.0 ))
                         ++ map (color green . drawLocalVelocities coordinates craftVel) parts
                         ++ [drawCraftDescription coordinates (inertiaTensor rocket)]
+                        ++ [drawOrbit coordinates]
                         )-- ++ map (color (dark green) . drawAction)) (thrustActions rocket (Tick 1.0 ))
               where (craftPlace, craftVel) = globalState coordinates (origin, atrest)
+
+drawOrbit           :: CoordinateSystem -> Picture
+drawOrbit system    = let
+                        body = CelestialBody (5 * (bodyOffset ** 2))
+                        bodyOffset = 1000000
+                        bodyCenter = makevect 0 0 (-bodyOffset)
+                        (place, vel) = globalState system (origin, atrest)
+                        orbit = fromStateToOrbit body (IState (place - bodyCenter) vel)
+                        arguments = map (\x -> _M orbit + x / 200.0 ) [-20..20]
+                        pts = map (fromOrbitToState body orbit) arguments
+                        centeredPts = map ((+ bodyCenter) . statePlace) pts
+                        currPt = (+ bodyCenter) . statePlace $ fromOrbitToState body orbit (_M orbit)
+                      in pictures [color (light blue) $ line (map ptPlaceCoord centeredPts),
+                                 writeOrbitDescription orbit,
+                                 translate (-380) (200) $ scale textSize textSize
+                                 $ appendLine ("coordinates: (" ++ showFixed (xcoord (head centeredPts)) ++ ", " ++ showFixed (ycoord (head centeredPts)) ++ ", "  ++ showFixed (zcoord (head centeredPts)) ++ ") ") blank,
+                                 color red $ drawCircle currPt 5]
+
+writeOrbitDescription :: Orbit -> Picture
+writeOrbitDescription (Orbit _a _e _i _omega _Omega _nu _M _p)
+                        =  translate (-380) (300) $ scale textSize textSize
+                        $ appendLine ("_a = " ++ showFixed _a)
+                        $ appendLine ("_e = " ++ showFixed _e)
+                        $ appendLine ("_i = " ++ showFixed _i)
+                        $ appendLine ("_omega = " ++ showFixed _omega)
+                        $ appendLine ("_Omega = " ++ showFixed _Omega)
+                        $ appendLine ("_nu = " ++ showFixed _nu)
+                        $ appendLine ("_M = " ++ showFixed _M)
+                        $ appendLine ("_p = " ++ showFixed _p) blank
 
 drawLocalVelocities :: CoordinateSystem -> Velocity -> RigidPointObj -> Picture
 drawLocalVelocities system craftVel obj
@@ -97,7 +129,8 @@ drawRelativeToCraft (RigidCraft parts coordinates ground) p
 drawCenter (RigidCraft parts _ _)
                             = line (map ptCoord (parts ++ [head parts]))--[(-10, -15), (0, 15), (10,-15), (-10,-15)]
 
-ptCoord p = (double2Float $ xcoord (objPlace p), double2Float $ zcoord $ objPlace p)
+ptCoord p = ptPlaceCoord (objPlace p)
+ptPlaceCoord place = (double2Float $ xcoord place, double2Float $ zcoord $ place)
 
 instance Drawable RigidPointObj where
     draw obj        = let place = objPlace obj
