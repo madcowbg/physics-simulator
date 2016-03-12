@@ -11,7 +11,7 @@
 -- |
 --
 -----------------------------------------------------------------------------
-
+{-# LANGUAGE FlexibleContexts #-}
 module Physics.BasicDraw (
     draw
 ) where
@@ -37,6 +37,9 @@ import Graphics.Gloss.Data.Color
 
 import GHC.Float
 import Numeric
+
+import Control.Monad.Writer
+import Control.Monad.Trans.State
 
 import Physics.Orbit.Freefall
 
@@ -80,15 +83,29 @@ instance Drawable Rocket where
                         ++ map (color green . drawLocalVelocities coordinates craftVel) parts
                         ++ [drawCraftDescription coordinates (inertiaTensor rocket)]
                         ++ [drawOrbit coordinates]
+                        ++ [drawOrbitY interceptState]
                         )-- ++ map (color (dark green) . drawAction)) (thrustActions rocket (Tick 1.0 ))
               where (craftPlace, craftVel) = globalState coordinates (origin, atrest)
+                    interceptState = calculateSigleStepNeededVelocity body
+                                        (IState (globalPlace coordinates atrest - bodyCenter) atrest) (makevect 0 0 0) 0
+
+--calculateSigleStepNeededVelocity    :: CelestialBody -> IState -> Place -> Angle -> IState
+
+bodyOffset = 1000000
+bodyCenter = makevect 0 0 (-bodyOffset)
+body = CelestialBody (5 * (bodyOffset ** 2))
 
 drawOrbit           :: CoordinateSystem -> Picture
 drawOrbit system    = let
-                        body = CelestialBody (5 * (bodyOffset ** 2))
-                        bodyOffset = 1000000
-                        bodyCenter = makevect 0 0 (-bodyOffset)
                         (place, vel) = globalState system (origin, atrest)
+                      in drawOrbitZ place vel
+
+drawOrbitY          :: IState -> Picture
+drawOrbitY (IState place vel)
+                    = drawOrbitZ place vel
+
+drawOrbitZ          :: Place -> Velocity -> Picture
+drawOrbitZ place vel = let
                         orbit = fromStateToOrbit body (IState (place - bodyCenter) vel)
                         arguments = map (/ 1) [-20..20]
                         pts = map (fromOrbitToState body orbit) arguments
@@ -175,5 +192,85 @@ drawEnergy gravity rocket
 showFixed f = showFFloat (Just 2) f ""
 showFixedHighPrecision f = showFFloat (Just 10) f ""
 
+
+--newtype State s a = State { runState :: s -> (a, s) }
+
+type LineOffset = Float
+type ConsoleIO  = State LineOffset Picture
+
+sequentialLog   :: ConsoleIO
+sequentialLog   = state (\offset -> (blank, offset))
+
+logText         :: String -> ConsoleIO
+logText line    = do
+                    offset <- get
+                    put (offset + 120)
+                    return (translate 0 offset $ text line)
+
+--logText         :: String -> ConsoleIO
+--logText string  =
+
+--data ConsoleIO a = ConsoleIO (ConsoleOffset -> (a, ConsoleOffset))
+--
+--instance Functor ConsoleIO where
+--    fmap f (ConsoleIO g) = ConsoleIO (\offset -> let (val, newoffset) = g offset
+--                                                 in (f val, newoffset))
+--
+--instance Applicative ConsoleIO where
+--    pure = return
+--    (<*>) = ap
+--
+--instance Monad ConsoleIO where
+----    return a = ConsoleIO $ \offset -> (a, offset)
+--    ConsoleIO oper >>= nextoper
+--        = ConsoleIO (\offset -> let (nextV, newoffset) = oper offset
+--                                    ConsoleIO nextf = nextoper nextV
+--                                in nextf newoffset)
+--
+--data ConsoleST  = ST ConsoleOffset Picture
+--
+--logText         :: String -> ConsoleST
+--logText string    = ST 0 (text string)
+
+--simpleConsole   ::
+
+--instance Monad ConsoleIO where
+
+--data ConsoleText = ConsoleText [String]-- (a -> Picture)
+--
+--instance Monoid ConsoleText where
+--    mempty  = ConsoleText []
+--    mappend (ConsoleText a) (ConsoleText b) = ConsoleText (a ++ b)
+
+--data Console o = Console o
+
+--instance Functor Console where
+--    fmap f (Console = map
+
+--instance Applicative Console where
+
+--instance Monad Console where
+--
+--instance Writer Picture
+--
+--instance MonadWriter ConsoleIO
+--instance Monoid ConsoleIO where
+--  mempty    = ConsoleIO 0 0
+--  mappend (ConsoleIO x y) :: m -> m -> m
+----
+--  --fmap :: (a -> b) -> f a -> f b
+--  fmap  = map
+
+--instance Monoid Functor  where
+--    ConsoleIO lines `bind` f = ConsoleIO line:lines
+--    return line = ConsoleIO [line]
+
 appendLine        :: String -> Picture -> Picture
 appendLine txt picture = pictures [translate 0 (-150) picture, text txt]
+
+--logText :: (Show a, MonadWriter [String] m) => a -> m a
+--logText text = writer (text, ["Got number: " ++ show text])
+
+
+
+
