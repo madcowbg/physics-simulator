@@ -50,7 +50,7 @@ leftPart = RigidPointObj (makevect (-10) 0 (-15)) 5 (ForceChain dragLeft globalC
 rightPart = RigidPointObj (makevect 10 0 (-15)) 10 (ForceChain dragRight globalChain)
 topPart = RigidPointObj (makevect 0 0 15) 10 (ForceChain dragTop globalChain)
 
-craftZeroCoordinates = CoordinateSystem GlobalSystem (makevect (200) 0 (100)) (makevect 0 0 0) identityOrient (makevect 0 0 0)
+craftZeroCoordinates = CoordinateSystem GlobalSystem (makevect (200) 0 (100)) (makevect (-20) 0 20) identityOrient (makevect 0 0 0)
 craft = createRigid [leftPart, rightPart, topPart] craftZeroCoordinates ground
 
 symmRocket  :: Rocket
@@ -78,10 +78,10 @@ simpRocket  = let
 passiveRocket :: Rocket
 passiveRocket  = Rocket craft []
 
-createScene :: StdGen -> SmallWorld
-createScene stdGen
+createScene :: SmallWorld
+createScene
             = let
-                  rocket = symmRocket
+                  rocket = passiveRocket
 --                  firstStage = ControlState [Control 0.1]
 --                  secondStage = ControlState [Control 1]
 --                  thirdStage = ControlState [Control 0.15]
@@ -92,27 +92,26 @@ createScene stdGen
                   world = SmallWorld 0 [rocket] ground gravity NoStrategy
 
                   --Double -> Criterion -> SmallWorld -> ControlStrategy
-              in findBetterControl stdGen world
+              in findBetterControl world
 
 
-findBetterControl stdGen world = world {craftControl = findBestControls stdGen 1 criterion world}
+findBetterControl world = world {craftControl = findBestControls 1 criterion world}
 
 criterion   = Criterion (makevect (200) 0 (-0)) atrest (CriterionW 1 0)
 
 window = InWindow "My Window" (800, 800) (0, 0)
-fps = 24
+fps = 60
 
 update      :: (World w) => ViewPort -> Float -> w -> w
 update _ t   = updateWorld (float2Double t)
 
-controlledUpdate :: Double -> StdGen -> ViewPort -> Float -> SmallWorld -> SmallWorld
-controlledUpdate ups stdGen vp t world@(SmallWorld time _ _ _ _)
+controlledUpdate :: Double -> ViewPort -> Float -> SmallWorld -> SmallWorld
+controlledUpdate ups vp t world@(SmallWorld time _ _ _ _)
                     | fromInteger (ceiling (ups*time)) < ups*(time + float2Double t)
-                                                    = update vp t (findBetterControl stdGen world)
+                                                    = update vp t (findBetterControl world)
                     | otherwise                     = update vp t world
 
 runBasicDemo    :: IO()
 runBasicDemo    = do
-                    stdGen <- getStdGen
-                    simulate window white fps (createScene stdGen) draw (controlledUpdate 1 stdGen)
+                    simulate window white fps (createScene) draw (controlledUpdate 0.02)
 

@@ -62,15 +62,15 @@ attachControlsAndSimulate :: Double -> [Double] -> SmallWorld -> SmallWorld
 attachControlsAndSimulate time controls
                         = simulateWorld (Tick 0.025) time . attachControls controls
 
-findBestControls        :: StdGen -> Double -> Criterion -> SmallWorld -> ControlStrategy
-findBestControls stdGen time criterion world
+findBestControls        :: Double -> Criterion -> SmallWorld -> ControlStrategy
+findBestControls time criterion world
                     = arrayToSingleStepStrategy (toList solution)
                       where craftFun    = head . crafts
                             ndim        = length (currentControls (craftFun world))
                             bnds        = (fromList (replicate ndim 0.0), fromList (replicate ndim 1.0))
                             optimFunc   = controlFitness criterion (attachControlsAndSimulate time) craftFun world
                             func        = filterOutsideRange optimFunc . toList
-                            guide       = easyOptimize func bnds 10 stdGen
+                            guide       = easyOptimize func bnds 5 (mkStdGen 5)
                             solution    = pt guide
 
 filterOutsideRange      :: ([Double] -> Double) -> [Double] -> Double
