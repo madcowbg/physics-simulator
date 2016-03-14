@@ -54,7 +54,7 @@ comparePlace craft place= distance (localPlace (craftCoordinates craft) place)
 compareVelocity         :: Craft c => c -> Velocity -> Double
 compareVelocity craft velocity
                         = distance localVelocity
-                          where localVelocity = snd (localState (craftCoordinates craft) (origin, velocity))
+                          where (StateTriplet _ localVelocity _) = localState (craftCoordinates craft) (StateTriplet origin velocity (craftCoordinates craft))
 
 -- TODO compareOrientation
 

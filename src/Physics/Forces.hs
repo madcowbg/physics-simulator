@@ -56,4 +56,4 @@ data AirResistance = AirResistance {drag :: Double}
 instance Force AirResistance where
     act (AirResistance drag) (Tick s) system localPlace localVelocity obj
                     = ForceAction place (scaleForceAmount velocity (-1 * s * drag))
-                     where (place, velocity) = globalState system (localPlace, localVelocity)
+                     where StateTriplet place velocity frame = globalState system (StateTriplet localPlace localVelocity system)

@@ -13,6 +13,7 @@
 -----------------------------------------------------------------------------
 
 module Physics.Coordinates (
+    StateTriplet (StateTriplet),
     FrameOfReference, EmbeddedFrameOfReference,
     InertialCoordinates (InertialCoordinates),
     RotatingCoordinates (GlobalSystem, RotatingCoordinates),
@@ -47,6 +48,8 @@ import Physics.Primitives
 import Physics.Elementary
 import Physics.Time
 
+data (FrameOfReference f) => StateTriplet f = StateTriplet {locationInFrame :: Place, velocityInFrame :: Velocity, frame :: f}
+
 class FrameOfReference s where
     zeroLocation :: s -> Place
     zeroOrientation :: s -> Orientation
@@ -80,8 +83,8 @@ class (FrameOfReference e) => EmbeddedFrameOfReference e where
     globalOrientation          :: e -> Place -> Place
 
 
-    globalState                 :: e -> (Place, Velocity) -> (Place, Velocity)
-    localState                  :: e -> (Place, Velocity) -> (Place, Velocity)
+    globalState                 :: e -> StateTriplet e -> StateTriplet e
+    localState                  :: e -> StateTriplet e -> StateTriplet e
 
 
 instance EmbeddedFrameOfReference RotatingCoordinates where
@@ -116,16 +119,15 @@ toChildVelocity system childPlace parentVel
                             = parentVel - systemVelocity system
                               - orientVector (zeroOrientation system) (rotationVelocity (angularVelocity system) childPlace)
 
-toParentState               :: RotatingCoordinates -> (Place, Velocity) -> (Place, Velocity)
-toParentState system (localPlace, localVelocity)
+toParentState               :: RotatingCoordinates -> StateTriplet RotatingCoordinates -> StateTriplet RotatingCoordinates
+toParentState system (StateTriplet localPlace localVelocity frame)
                             = let parentPlace = toParentPlace system localPlace
-                              in (parentPlace, toParentVelocity system localPlace localVelocity)
+                              in StateTriplet parentPlace (toParentVelocity system localPlace localVelocity) system
 
-toChildState                :: RotatingCoordinates -> (Place, Velocity) -> (Place, Velocity)
-toChildState system (parentPlace, parentVelocity)
+toChildState                :: RotatingCoordinates -> StateTriplet RotatingCoordinates -> StateTriplet RotatingCoordinates
+toChildState system (StateTriplet parentPlace parentVelocity frame)
                             = let childPlace = toChildPlace system parentPlace
-                              in (childPlace, toChildVelocity system childPlace parentVelocity)
-
+                              in StateTriplet childPlace (toChildVelocity system childPlace parentVelocity) system
 
 toLocal                        :: (RotatingCoordinates -> RotatingCoordinates) -> (RotatingCoordinates -> a -> a) -> RotatingCoordinates -> a -> a
 toLocal f g GlobalSystem val   = val
