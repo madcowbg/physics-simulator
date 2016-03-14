@@ -13,7 +13,9 @@
 -----------------------------------------------------------------------------
 
 module Physics.Coordinates (
-    CoordinateSystem (GlobalSystem, CoordinateSystem),
+    FrameOfReference, EmbeddedFrameOfReference,
+    InertialCoordinates (InertialCoordinates),
+    RotatingCoordinates (GlobalSystem, RotatingCoordinates),
     globalPlace, localPlace,
     localAcceleration, globalAcceleration,
     globalState, localState,
@@ -45,70 +47,94 @@ import Physics.Primitives
 import Physics.Elementary
 import Physics.Time
 
-data CoordinateSystem = GlobalSystem | CoordinateSystem {parent :: CoordinateSystem,
-                                        zeroLocation :: Place, velocity :: Velocity, orientation :: Orientation, angularVelocity :: AngularVelocity}
+class FrameOfReference s where
+    zeroLocation :: s -> Place
+    zeroOrientation :: s -> Orientation
+    systemVelocity    :: s -> Velocity
+    systemAngularVelocity :: s -> AngularVelocity
 
-setPlaceAndUpdateVelocity   :: CoordinateSystem -> Place -> (Velocity -> Velocity) -> CoordinateSystem
-setPlaceAndUpdateVelocity system place fVel = system {zeroLocation = place, velocity = fVel (velocity system)}
+data InertialCoordinates = InertialCoordinates {location :: Place, velocity :: Velocity, orientation :: Orientation}
 
-toParentPlace               :: CoordinateSystem -> Place -> Place
+instance FrameOfReference InertialCoordinates where
+    zeroLocation                = location
+    zeroOrientation             = orientation
+    systemVelocity              = velocity
+    systemAngularVelocity s     = makevect 0.0 0 0
+
+data RotatingCoordinates = GlobalSystem | RotatingCoordinates {parent :: RotatingCoordinates, inertial :: InertialCoordinates, angularVelocity :: AngularVelocity}
+
+instance FrameOfReference RotatingCoordinates where
+    zeroLocation                = location . inertial
+    zeroOrientation             = orientation . inertial
+    systemVelocity              = velocity . inertial
+    systemAngularVelocity       = angularVelocity
+
+class (FrameOfReference e) => EmbeddedFrameOfReference e where
+    globalPlace                 :: e -> Place -> Place
+    localPlace                  :: e -> Place -> Place
+
+    -- accelleration is just rotated
+    localAcceleration          :: e -> Acceleration -> Acceleration
+
+    globalAcceleration         :: e -> Acceleration -> Acceleration
+    globalOrientation          :: e -> Place -> Place
+
+
+    globalState                 :: e -> (Place, Velocity) -> (Place, Velocity)
+    localState                  :: e -> (Place, Velocity) -> (Place, Velocity)
+
+
+instance EmbeddedFrameOfReference RotatingCoordinates where
+    globalPlace                 = toGlobal parent toParentPlace
+    globalAcceleration         = toGlobal parent (\system accel -> orientVector (zeroOrientation system) accel)
+    globalOrientation           = toGlobal parent (\system orient -> orientVector (zeroOrientation system) orient)
+    globalState                 = toGlobal parent toParentState
+
+    localPlace                  = toLocal parent toChildPlace
+    localAcceleration          = toLocal parent (\system accel -> reverseOrientVector (zeroOrientation system) accel)
+    localState                  = toLocal parent toChildState
+
+setPlaceAndUpdateVelocity   :: RotatingCoordinates -> Place -> (Velocity -> Velocity) -> RotatingCoordinates
+setPlaceAndUpdateVelocity system place fVel = system {inertial = (inertial system) {location = place, velocity = fVel (systemVelocity system)}}
+
+toParentPlace               :: RotatingCoordinates -> Place -> Place
 toParentPlace GlobalSystem _= error "cannot find parent of global system"
-toParentPlace system place  = orientVector (orientation system) place + zeroLocation system
+toParentPlace system place  = orientVector (zeroOrientation system) place + zeroLocation system
 
-toChildPlace system place   = reverseOrientVector (orientation system) (zeroLocation system - place)
+toChildPlace                :: RotatingCoordinates -> Place -> Place
+toChildPlace system place   = reverseOrientVector (zeroOrientation system) (zeroLocation system - place)
 
-globalPlace                 :: CoordinateSystem -> Place -> Place
-globalPlace                 = toGlobal parent toParentPlace
-
-localPlace                  :: CoordinateSystem -> Place -> Place
-localPlace                  = toLocal parent toChildPlace
-
--- accelleration is just rotated
-localAcceleration          :: CoordinateSystem -> Acceleration -> Acceleration
-localAcceleration          = toLocal parent (\system accel -> reverseOrientVector (orientation system) accel)
-
-globalAcceleration         :: CoordinateSystem -> Acceleration -> Acceleration
-globalAcceleration         = toGlobal parent (\system accel -> orientVector (orientation system) accel)
-
-globalOrientation          :: CoordinateSystem -> Place -> Place
-globalOrientation           = toGlobal parent (\system orient -> orientVector (orientation system) orient)
-
-toLocal                        :: (CoordinateSystem -> CoordinateSystem) -> (CoordinateSystem -> a -> a) -> CoordinateSystem -> a -> a
-toLocal f g GlobalSystem val   = val
-toLocal f g system place       = g system (toLocal f g (f system) place)
-
-toGlobal                      :: (CoordinateSystem -> CoordinateSystem) -> (CoordinateSystem -> a -> a) -> CoordinateSystem -> a -> a
-toGlobal f g GlobalSystem val = val
-toGlobal f g system val       = toGlobal f g (f system) (g system val)
-
-toParentVelocity            :: CoordinateSystem -> Place -> Velocity -> Velocity
+toParentVelocity            :: RotatingCoordinates -> Place -> Velocity -> Velocity
 toParentVelocity GlobalSystem _ _ = error "cannot find parent of global system"
 toParentVelocity system localPlace localVel
-                            = localVel + velocity system
-                              + orientVector (orientation system) (rotationVelocity (angularVelocity system) localPlace)
+                            = localVel + systemVelocity system
+                              + orientVector (zeroOrientation system) (rotationVelocity (angularVelocity system) localPlace)
 
-toChildVelocity             :: CoordinateSystem -> Place -> Velocity -> Velocity
+toChildVelocity             :: RotatingCoordinates -> Place -> Velocity -> Velocity
 toChildVelocity GlobalSystem _ _ = error "cannot find parent of global system"
 toChildVelocity system childPlace parentVel
-                            = parentVel - velocity system
-                              - orientVector (orientation system) (rotationVelocity (angularVelocity system) childPlace)
+                            = parentVel - systemVelocity system
+                              - orientVector (zeroOrientation system) (rotationVelocity (angularVelocity system) childPlace)
 
-globalState                 :: CoordinateSystem -> (Place, Velocity) -> (Place, Velocity)
-globalState                 = toGlobal parent toParentState
-
-toParentState               :: CoordinateSystem -> (Place, Velocity) -> (Place, Velocity)
+toParentState               :: RotatingCoordinates -> (Place, Velocity) -> (Place, Velocity)
 toParentState system (localPlace, localVelocity)
                             = let parentPlace = toParentPlace system localPlace
                               in (parentPlace, toParentVelocity system localPlace localVelocity)
 
-
-localState                  :: CoordinateSystem -> (Place, Velocity) -> (Place, Velocity)
-localState                  = toLocal parent toChildState
-
-toChildState                :: CoordinateSystem -> (Place, Velocity) -> (Place, Velocity)
+toChildState                :: RotatingCoordinates -> (Place, Velocity) -> (Place, Velocity)
 toChildState system (parentPlace, parentVelocity)
                             = let childPlace = toChildPlace system parentPlace
                               in (childPlace, toChildVelocity system childPlace parentVelocity)
+
+
+toLocal                        :: (RotatingCoordinates -> RotatingCoordinates) -> (RotatingCoordinates -> a -> a) -> RotatingCoordinates -> a -> a
+toLocal f g GlobalSystem val   = val
+toLocal f g system place       = g system (toLocal f g (f system) place)
+
+toGlobal                      :: (RotatingCoordinates -> RotatingCoordinates) -> (RotatingCoordinates -> a -> a) -> RotatingCoordinates -> a -> a
+toGlobal f g GlobalSystem val = val
+toGlobal f g system val       = toGlobal f g (f system) (g system val)
+
 
 class Movable m where
     changePosition          :: Tick -> m -> m
@@ -122,21 +148,21 @@ class Acceleratable a where
 class Torqueable t where
     changeAngularVelocity   :: AngularAcceleration -> t -> t
 
-instance Movable CoordinateSystem where
+instance Movable RotatingCoordinates where
     changePosition (Tick dt) system
-                        = system {zeroLocation = integratePosition (zeroLocation system) (velocity system) dt}
+                        = system {inertial = (inertial system) {location = integratePosition (zeroLocation system) (systemVelocity system) dt}}
 
-instance Rotatable CoordinateSystem where
+instance Rotatable RotatingCoordinates where
     changeOrientation (Tick dt) system
-                        = system {orientation = integrateOrientation (orientation system) (angularVelocity system) dt}
+                        = system {inertial = (inertial system) {orientation = integrateOrientation (zeroOrientation system) (angularVelocity system) dt}}
 
-instance Acceleratable CoordinateSystem where
+instance Acceleratable RotatingCoordinates where
     changeVelocity acceleration system
-                        = system {velocity = integrateVelocity (velocity system) acceleration}
+                        = system {inertial = (inertial system) {velocity = integrateVelocity (systemVelocity system) acceleration}}
 
-instance Torqueable CoordinateSystem where
+instance Torqueable RotatingCoordinates where
     changeAngularVelocity angularAcceleration system
-                        = system {angularVelocity = integrateAngularVelocity (angularVelocity system) angularAcceleration}
+                        = system {angularVelocity = integrateAngularVelocity (systemAngularVelocity system) angularAcceleration}
 
 sumForcesAmount     = vectorSum
 scaleForceAmount    = vectorScale

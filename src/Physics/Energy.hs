@@ -26,7 +26,7 @@ import Physics.Craft.Basic
 import Physics.Craft.Rocket
 
 class PotentialForce f where
-    potentialEnergy     :: f -> CoordinateSystem -> RigidPointObj -> Double
+    potentialEnergy     :: f -> RotatingCoordinates -> RigidPointObj -> Double
 
 instance PotentialForce Gravity where
     potentialEnergy force system obj
@@ -44,5 +44,5 @@ instance HasEnergy Rocket where
 --instance HasEnergy RigidPointObj where
 --    calcEnergy force o = potentialEnergy force
 
-kineticEnergy       :: CoordinateSystem -> RigidPointObj -> Double
+kineticEnergy       :: RotatingCoordinates -> RigidPointObj -> Double
 kineticEnergy system obj = let velocity = snd (globalState system (objPlace obj, atrest)) in scalarProduct velocity velocity * objMass obj / 2

@@ -50,7 +50,7 @@ leftPart = RigidPointObj (makevect (-10) 0 (-15)) 5 (ForceChain dragLeft globalC
 rightPart = RigidPointObj (makevect 10 0 (-15)) 10 (ForceChain dragRight globalChain)
 topPart = RigidPointObj (makevect 0 0 15) 10 (ForceChain dragTop globalChain)
 
-craftZeroCoordinates = CoordinateSystem GlobalSystem (makevect (200) 0 (100)) (makevect (-20) 0 20) identityOrient (makevect 0 0 0)
+craftZeroCoordinates = RotatingCoordinates GlobalSystem (InertialCoordinates (makevect (200) 0 (100)) (makevect (-20) 0 20) identityOrient) (makevect 0 0 0)
 craft = createRigid [leftPart, rightPart, topPart] craftZeroCoordinates ground
 
 symmRocket  :: Rocket

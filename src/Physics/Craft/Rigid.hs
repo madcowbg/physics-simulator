@@ -24,9 +24,9 @@ import Physics.Time
 import Physics.Forces
 import Physics.Craft.Basic
 
-data RigidCraft          = RigidCraft {parts :: [RigidPointObj], coordinates :: CoordinateSystem, ground :: BouncingGround}
+data RigidCraft          = RigidCraft {parts :: [RigidPointObj], coordinates :: RotatingCoordinates, ground :: BouncingGround}
 
-createRigid             :: [RigidPointObj] -> CoordinateSystem -> BouncingGround -> RigidCraft
+createRigid             :: [RigidPointObj] -> RotatingCoordinates -> BouncingGround -> RigidCraft
 createRigid p c g       = centerCraft (RigidCraft p c g)
 
 

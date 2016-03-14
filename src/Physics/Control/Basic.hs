@@ -39,7 +39,7 @@ moveThruster diff p     = p  {forcePlace = forcePlace p + diff}
 
 data ThrusterForce = ThrusterForce {maxPower :: Double, thrustDirection :: Acceleration}
 
-actThrust                   :: Tick -> CoordinateSystem -> Thruster -> Velocity -> ForceAction
+actThrust                   :: Tick -> RotatingCoordinates -> Thruster -> Velocity -> ForceAction
 actThrust (Tick s) coordinates thruster localVel
                             = ForceAction (globalPlace coordinates (objPlace thruster))
                           (scaleForceAmount (globalAcceleration coordinates (thrustDirection thrusterForce)) (-s * maxPower thrusterForce * percentThrust thruster))

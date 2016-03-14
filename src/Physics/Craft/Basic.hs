@@ -42,7 +42,7 @@ class (Movable c, Rotatable c, ShockableObj c) => Craft c where
     inertiaTensor       :: c -> InertiaTensor
     inertiaTensor craft = calculateIntertiaTensor (map (\p -> (objPlace p, objMass p)) (massiveParts craft))
 
-    craftCoordinates    :: c -> CoordinateSystem
+    craftCoordinates    :: c -> RotatingCoordinates
 
     partsActions        :: c -> Tick -> [ForceAction]
     partsActions craft t        = concatMap (\p -> actOnChain (forces p) t (craftCoordinates craft) (objPlace p) atrest p) (massiveParts craft)
@@ -63,7 +63,7 @@ class (Movable c, Rotatable c, ShockableObj c) => Craft c where
 
     moveParts           :: c -> Place -> c
 
-    changeCoordinates   :: c -> (CoordinateSystem -> CoordinateSystem) -> c
+    changeCoordinates   :: c -> (RotatingCoordinates -> RotatingCoordinates) -> c
 
 
 
@@ -73,10 +73,10 @@ executeActions shocks actions craft
                               where (aggregateForce, aggregateTorque) = aggregateActions (map (localAction system) actions)
                                     system = craftCoordinates craft
 
-accelerate          :: (Craft c) => CoordinateSystem -> ForceAmount -> c -> c
+accelerate          :: (Craft c) => RotatingCoordinates -> ForceAmount -> c -> c
 accelerate system f c      = changeCoordinates c (changeVelocity (globalAcceleration system (asAcceleration f (mass c))))
 
-spin              :: (Craft c) => CoordinateSystem -> Torque -> c -> c
+spin              :: (Craft c) => RotatingCoordinates -> Torque -> c -> c
 spin system torque c     = changeCoordinates c (changeAngularVelocity (globalAcceleration system (asAngularAcceleration torque (inertiaTensor c))))
 
 aggregateActions    :: [ForceAction] -> (ForceAmount, Torque)
@@ -90,11 +90,11 @@ forceTorque         :: ForceAction -> Torque
 forceTorque (ForceAction place amt)
                         =  calcTorque amt place
 
-localAction         :: CoordinateSystem -> ForceAction -> ForceAction
+localAction         :: RotatingCoordinates -> ForceAction -> ForceAction
 localAction system (ForceAction globalPlace forceAmt)
                     = ForceAction (localPlace system globalPlace) (localAcceleration system forceAmt)
 
-coordinatesShock                :: [ShockAction] -> CoordinateSystem -> CoordinateSystem
+coordinatesShock                :: [ShockAction] -> RotatingCoordinates -> RotatingCoordinates
 coordinatesShock [] system      = system
 coordinatesShock actions@(NoShockAction:as) system
                                 = coordinatesShock as system
