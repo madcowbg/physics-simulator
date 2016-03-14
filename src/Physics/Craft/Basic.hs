@@ -17,7 +17,7 @@ module Physics.Craft.Basic (
     craftActions, executeForces, partsActions, inertiaTensor, craftCoordinates,
     shockCraft, calculateMassCenter, massiveParts, moveParts, centerCraft, changeCoordinates,
     RigidPointObj (RigidPointObj), moveRigidPointObj,
-    changeOrientation, changePosition,
+    changeOrientation, changePosition
 ) where
 
 import Physics.Coordinates
@@ -45,7 +45,7 @@ class (Movable c, Rotatable c, ShockableObj c) => Craft c where
     craftCoordinates    :: c -> RotatingCoordinates
 
     partsActions        :: c -> Tick -> [ForceAction]
-    partsActions craft t        = concatMap (\p -> actOnChain (forces p) t (craftCoordinates craft) (objPlace p) atrest p) (massiveParts craft)
+    partsActions craft t        = concatMap (\p -> actOnChain (forces p) t (globalReference craft p) p) (massiveParts craft)
 
     craftActions        :: c -> Tick -> [ShockAction]
 
@@ -65,7 +65,9 @@ class (Movable c, Rotatable c, ShockableObj c) => Craft c where
 
     changeCoordinates   :: c -> (RotatingCoordinates -> RotatingCoordinates) -> c
 
-
+globalReference     :: (Craft c) => c -> RigidPointObj -> StateTriplet RotatingCoordinates
+globalReference craft p
+                    = globalState (craftCoordinates craft) (StateTriplet (objPlace p) atrest (craftCoordinates craft))
 
 executeActions      :: (Craft c) => [ShockAction] -> [ForceAction] -> c -> c
 executeActions shocks actions craft

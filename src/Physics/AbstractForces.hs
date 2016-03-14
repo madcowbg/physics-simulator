@@ -14,7 +14,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 
 module Physics.AbstractForces (
-    Force, act,
+    Force, action,
     ForceAction (ForceAction), actionAmt,
     ShockForce, shock,
     ShockAction (ShockAction, NoShockAction),
@@ -35,17 +35,17 @@ class (ShockableObj o) => PhysicalObj o where
 
 -- Forces
 class Force f where
-    act             :: (PhysicalObj o) => f -> Tick -> RotatingCoordinates -> Place -> Velocity -> o -> ForceAction
+    action             :: (PhysicalObj o, FrameOfReference s) => f -> Tick -> StateTriplet s -> o -> ForceAction
 
 class ShockForce f where
-    shock           :: (ShockableObj o) => f -> Tick -> RotatingCoordinates -> Place -> Velocity -> o -> ShockAction
+    shock           :: (ShockableObj o, FrameOfReference s) => f -> Tick -> StateTriplet s -> o -> ShockAction
 
 data ForceAction    = ForceAction {actionPlace :: Place, actionAmt :: ForceAmount}
 data ShockAction    = ShockAction Place (Velocity->Velocity) | NoShockAction
 
 data ForceChain = forall f. (Force f) => ForceChain {this :: f, next :: ForceChain } | ForceEnd
 
-actOnChain                      :: (PhysicalObj o) => ForceChain -> Tick -> RotatingCoordinates -> Place -> Velocity -> o -> [ForceAction]
-actOnChain ForceEnd _ _ _ _ _   = []
-actOnChain (ForceChain this next) tick system localPlace localVelocity obj
-                                = act this tick system localPlace localVelocity obj:actOnChain next tick system localPlace localVelocity obj
+actOnChain                      :: (PhysicalObj o, FrameOfReference s) => ForceChain -> Tick -> StateTriplet s -> o -> [ForceAction]
+actOnChain ForceEnd _ _ _       = []
+actOnChain (ForceChain this next) tick state obj
+                                = action this tick state obj:actOnChain next tick state obj

@@ -37,7 +37,7 @@ instance ShockableObj RigidCraft where
 instance Craft RigidCraft where
     massiveParts                = parts
 
-    craftActions craft t        = [shock (ground craft) t (coordinates craft) origin atrest craft]
+    craftActions craft t        = [shock (ground craft) t (globalState (coordinates craft) (StateTriplet origin atrest (coordinates craft))) craft]
 
     craftCoordinates            = coordinates
 
