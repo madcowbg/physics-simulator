@@ -50,6 +50,10 @@ import Physics.Time
 
 data (FrameOfReference f) => StateTriplet f = StateTriplet {locationInFrame :: Place, velocityInFrame :: Velocity, frame :: f}
 
+class RelativeObject o where
+    toParentSystem  :: (FrameOfReference s) => s -> o -> o
+    toChildSystem   :: (FrameOfReference s) => s -> o
+
 class FrameOfReference s where
     zeroLocation :: s -> Place
     zeroOrientation :: s -> Orientation
@@ -83,19 +87,19 @@ class (FrameOfReference e) => EmbeddedFrameOfReference e where
     globalOrientation          :: e -> Place -> Place
 
 
-    globalState                 :: e -> StateTriplet e -> StateTriplet e
-    localState                  :: e -> StateTriplet e -> StateTriplet e
+    globalState                 :: StateTriplet e -> StateTriplet e
+    localState                  :: StateTriplet e -> StateTriplet e
 
 
 instance EmbeddedFrameOfReference RotatingCoordinates where
     globalPlace                 = toGlobal parent toParentPlace
-    globalAcceleration         = toGlobal parent (\system accel -> orientVector (zeroOrientation system) accel)
+    globalAcceleration          = toGlobal parent (\system accel -> orientVector (zeroOrientation system) accel)
     globalOrientation           = toGlobal parent (\system orient -> orientVector (zeroOrientation system) orient)
-    globalState                 = toGlobal parent toParentState
+    globalState state           = toGlobal parent toParentState (frame state) state
 
     localPlace                  = toLocal parent toChildPlace
-    localAcceleration          = toLocal parent (\system accel -> reverseOrientVector (zeroOrientation system) accel)
-    localState                  = toLocal parent toChildState
+    localAcceleration           = toLocal parent (\system accel -> reverseOrientVector (zeroOrientation system) accel)
+    localState state            = toLocal parent toChildState (frame state) state
 
 setPlaceAndUpdateVelocity   :: RotatingCoordinates -> Place -> (Velocity -> Velocity) -> RotatingCoordinates
 setPlaceAndUpdateVelocity system place fVel = system {inertial = (inertial system) {location = place, velocity = fVel (systemVelocity system)}}

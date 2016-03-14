@@ -45,4 +45,4 @@ instance HasEnergy Rocket where
 --    calcEnergy force o = potentialEnergy force
 
 kineticEnergy       :: RotatingCoordinates -> RigidPointObj -> Double
-kineticEnergy system obj = let (StateTriplet _ velocity _) = globalState system (StateTriplet (objPlace obj) atrest system) in scalarProduct velocity velocity * objMass obj / 2
+kineticEnergy system obj = let (StateTriplet _ velocity _) = globalState (StateTriplet (objPlace obj) atrest system) in scalarProduct velocity velocity * objMass obj / 2

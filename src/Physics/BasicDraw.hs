@@ -88,7 +88,7 @@ instance Drawable Rocket where
                         ++ [color (light green) $ drawOrbitY 100 (IState (interceptPos + bodyCenter) interceptVel)]
                         ++ [color (dark green) $ drawOrbitY (-100) (IState (progradeInterceptPos + bodyCenter) progradeInterceptVel)]
                         )-- ++ map (color (dark green) . drawAction)) (thrustActions rocket (Tick 1.0 ))
-              where (StateTriplet craftPlace craftVel _) = globalState coordinates (StateTriplet origin atrest coordinates)
+              where (StateTriplet craftPlace craftVel _) = globalState (StateTriplet origin atrest coordinates)
                     IState interceptPos interceptVel = calculateSigleStepNeededVelocity body
                                         (IState (craftPlace - bodyCenter) craftVel) (target - bodyCenter) (5)
                     IState progradeInterceptPos progradeInterceptVel = calculateSigleStepProgradeBurn body
@@ -104,7 +104,7 @@ body = CelestialBody (5 * (bodyOffset ** 2))
 
 drawOrbit           :: (EmbeddedFrameOfReference f) => Float -> f -> Picture
 drawOrbit offset system    = let
-                        (StateTriplet place vel _) = globalState system (StateTriplet origin atrest system)
+                        (StateTriplet place vel _) = globalState (StateTriplet origin atrest system)
                       in drawOrbitZ offset place vel
 
 drawOrbitY          :: Float -> IState -> Picture
@@ -137,7 +137,7 @@ writeOrbitDescription offset (Orbit (OrbitalParams _a _e _i _omega _Omega) _nu _
 
 drawLocalVelocities :: (EmbeddedFrameOfReference f) => f -> Velocity -> RigidPointObj -> Picture
 drawLocalVelocities system craftVel obj
-                    = let (StateTriplet place vel _) = globalState system (StateTriplet (objPlace obj) atrest system)
+                    = let (StateTriplet place vel _) = globalState (StateTriplet (objPlace obj) atrest system)
                       in drawVector place (5 * (vel - craftVel))
 
 drawVelocity place velocity
