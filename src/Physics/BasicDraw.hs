@@ -83,12 +83,15 @@ instance Drawable Rocket where
                         ++ map (color red . drawAction) (partsActions rocket (Tick 1.0 ))
                         ++ map (color green . drawLocalVelocities coordinates craftVel) parts
                         ++ [drawCraftDescription coordinates (inertiaTensor rocket)]
-                        ++ [drawOrbit 300 coordinates ]
-                        ++ [drawOrbitY 0 (IState (interceptPos + bodyCenter) interceptVel)]
+                        ++ [color (light blue) $ drawOrbit 300 coordinates ]
+                        ++ [color (light green) $ drawOrbitY 100 (IState (interceptPos + bodyCenter) interceptVel)]
+                        ++ [color (dark green) $ drawOrbitY (-100) (IState (progradeInterceptPos + bodyCenter) progradeInterceptVel)]
                         )-- ++ map (color (dark green) . drawAction)) (thrustActions rocket (Tick 1.0 ))
               where (craftPlace, craftVel) = globalState coordinates (origin, atrest)
                     IState interceptPos interceptVel = calculateSigleStepNeededVelocity body
-                                        (IState (globalPlace coordinates atrest - bodyCenter) atrest) (target - bodyCenter) (5)
+                                        (IState (craftPlace - bodyCenter) craftVel) (target - bodyCenter) (5)
+                    IState progradeInterceptPos progradeInterceptVel = calculateSigleStepProgradeBurn body
+                                        (IState (craftPlace - bodyCenter) craftVel) (target - bodyCenter)
 
 --calculateSigleStepNeededVelocity    :: CelestialBody -> IState -> Place -> Angle -> IState
 
@@ -114,7 +117,7 @@ drawOrbitZ offset place vel = let
                         pts = map (fromOrbitToState body orbit) arguments
                         centeredPts = map ((+ bodyCenter) . position) pts
                         currPt = (+ bodyCenter) . position $ fromOrbitToState body orbit 0
-                      in pictures [color (light blue) $ line (map ptPlaceCoord centeredPts),
+                      in pictures [line (map ptPlaceCoord centeredPts),
                                  writeOrbitDescription offset orbit,
                                  translate (-380) (200) $ scale textSize textSize
                                  $ appendLine ("behind pt: (" ++ showFixed (xcoord (head centeredPts)) ++ ", " ++ showFixed (ycoord (head centeredPts)) ++ ", "  ++ showFixed (zcoord (head centeredPts)) ++ ") ") blank,

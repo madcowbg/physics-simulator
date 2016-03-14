@@ -22,6 +22,7 @@ module Physics.Orbit.Freefall (
     -- ?
     trueAnomaly, meanAnomaly,
     calculateSigleStepNeededVelocity,
+    calculateSigleStepProgradeBurn
 ) where
 
 import qualified Linear.Quaternion as Q -- TODO move to primitives
@@ -30,8 +31,6 @@ import Linear.Metric -- TODO move to primitives
 import Linear.Vector -- TODO move to primitives
 import Linear.V3     -- TODO move to primitives
 import Control.Lens
-import Numeric.AD
-import Numeric.AD.Newton.Double
 
 import qualified Calypso.Core as C
 import Calypso.Instance.PsoVect
@@ -99,7 +98,7 @@ fromStateToOrbit body state@(IState r v)
                             _nhat   = cross _Khat _harr
                             _n      = norm _nhat
                             -- excentricity vector
-                            _earr   = cross v _harr ^/ _mu - (r ^/ _r)
+                            _earr   = eccentricityVector r v _harr _mu
                             __e      = norm _earr
                             -- specific mechanical energy
                             _E      = quadrance v / 2 - _mu / _r
@@ -107,6 +106,10 @@ fromStateToOrbit body state@(IState r v)
                             _nu     = calcTrueAnomaly _earr state
                             -- mean anomaly
                             __M     = trueToMeanAnomaly __e _nu
+
+eccentricityVector  :: Place -> Velocity -> Vector3 -> Double -> Vector3
+eccentricityVector r v _harr _mu
+                    = cross v _harr ^/ _mu - (r ^/ norm r)
 
 angularMomentum     :: IState -> Vector3
 angularMomentum (IState r v) = cross r v
@@ -118,9 +121,18 @@ calcArgumentOfPeriapsis _earr _z _nhat
 
 calcTrueAnomaly     :: Vector3 -> IState -> Double
 calcTrueAnomaly _earr (IState r v)
-                    | dot r v < 0  = 2 * pi - _nu
+                    = calcSignedAngle _earr r v
+
+calcSignedAngle     :: Vector3 -> Vector3 -> Vector3 -> Double
+calcSignedAngle base next velocity
+                    = calcHandedAngle base next (dot next velocity)
+
+calcHandedAngle     :: Vector3 -> Vector3 -> Double -> Double
+calcHandedAngle base next handedness
+                    | handedness < 0  = 2 * pi - _nu
                     | otherwise    = _nu
-                    where _nu = acos (dot _earr r / (norm _earr * norm r))
+                    where _nu = acos (dot base next / (norm base * norm next))
+
 
 ellipticalFromTrueAnomaly
                     :: Double -> Double -> Double
@@ -135,16 +147,12 @@ trueToMeanAnomaly __e =  (meanFromEllipticalAnomaly __e . ellipticalFromTrueAnom
 _mubody body    = gravityConst * mass body
 
 -- algorithm from https://downloads.rene-schwarz.com/download/M001-Keplerian_Orbit_Elements_to_Cartesian_State_Vectors.pdf
--- FIXME use findZero
 newton epsilon iter f f' guess
             | iter < 0          = guess
             | err < epsilon     = newGuess
             | otherwise         = newton epsilon (iter - 1) f f' newGuess
             where newGuess = guess - (f guess / f' guess)
                   err =  abs (newGuess - guess)
-
---newtonAD                :: Double -> (Double -> Double) -> Double -> Double
---newtonAD epsilon f guess = newton epsilon f (diff f) guess
 
 fromOrbitToState    :: CelestialBody -> Orbit -> Time -> IState
 fromOrbitToState body orbit@(Orbit orbitalParams _nu _M_0) deltaT
@@ -155,7 +163,7 @@ fromOrbitToState body orbit@(Orbit orbitalParams _nu _M_0) deltaT
                             -- true anomaly
                             _nu = ellipticalToTrueAnomaly orbitalParams _E
 
-fromOrbitAndTrueAnomalyToState  :: CelestialBody -> Orbit -> Time -> IState
+fromOrbitAndTrueAnomalyToState  :: CelestialBody -> Orbit -> Angle -> IState
 fromOrbitAndTrueAnomalyToState body orbit@(Orbit orbitalParams _nu_0 _M_0) _nu
                     = rotateToBodyInertial orbitalParams (IState r_o v_o) -- transform to inertial frame
                       where
@@ -189,15 +197,6 @@ rotateToBodyInertial orbitalParams (IState r_o v_o)
                                 _R_i    = Q.axisAngle (makevect 1.0 0 0) ( _i orbitalParams)
                                 _R_omega = Q.axisAngle (makevect 0.0 0 1) ( _omega orbitalParams)
                                 fullTransform = _R_Omega * _R_i * _R_omega
-
---atan2       :: Double -> Double -> Double
---atan2 0 y   | y > 0     = pi / 2
---            | y < 0     = -pi / 2
---            | otherwise = error
---atan2 x y   | x > 0     = atan (y/x)
---            | y >= 0 && x < 0   = atan (y/x) + pi
---            | y < 0  && x < 0   = atan (y/x) - pi
---            | otherwise = error
 
 -- | Normalize an angle to be between 0 and 2*pi radians
 normalizeAngle :: Double -> Double
@@ -248,29 +247,38 @@ type DeltaV = Vector3
 
 --                            _h = cross _OA _OX  -- normal of intercept trajectory (specific angular momentum)
 --
+
+calculateSigleStepProgradeBurn    :: CelestialBody -> IState -> Place-> IState
+calculateSigleStepProgradeBurn  body state@(IState position v) targetPlace
+            = calculateSigleStepNeededVelocity body state targetPlace (calcSignedAngle position v v)
+
 calculateSigleStepNeededVelocity    :: CelestialBody -> IState -> Place -> Angle -> IState
-calculateSigleStepNeededVelocity body state@(IState p v) targetPlace alpha
+calculateSigleStepNeededVelocity body state@(IState position v) targetPlace alpha
             = let
                 _OX = targetPlace
-                _OA = p
-                _h = cross _OX _OA  -- needed normal of intercept trajectory (specific angular momentum)
-                _hunit = _h ^/ norm _h
-                deltaTrueAnomaly = acos (dot _OA _OX / (norm _OA * norm _OX))
-                _AOunit = _OA ^* (-1 / norm _OA)
-                vunit = Q.rotate (Q.axisAngle _hunit alpha) _AOunit
-                optV = univariateMin (-600) 600 (\vmag -> norm (_OX - _OZ _OA deltaTrueAnomaly vunit vmag))
-              in traceShow (optV) $ IState _OA (optV *^ vunit)
+                _OA = position
+                --deltaTrueAnomaly = acos (dot _OA _OX / (norm _OA * norm _OX))
+                _OAunit = _OA ^/ norm _OA
+                _harr = cross _OA _OX  -- needed normal of intercept trajectory (specific angular momentum)
+                _hunit = _harr ^/ norm _harr
+                direction = Q.rotate (Q.axisAngle _hunit alpha) _OAunit
+                beta = calcSignedAngle _OA _OX direction
+                optV = univariateMin (-600) 600 (\speed -> norm (_OX - predictAtAnomaly body _OA _OX _harr beta direction speed))
+              in IState _OA (optV *^ direction)
               where
-                _OZ     :: Place -> Double -> Vector3 -> Double -> Vector3    -- place after moving as close to target as possible
-                _OZ _OA deltaTrueAnomaly vunit vsize
-                            = let
-                                _AB = vsize *^ vunit
-                                interceptOrbit = fromStateToOrbit body (IState _OA _AB)
-                                trueAnomalyOfTarget = deltaTrueAnomaly - _nu interceptOrbit
-                                --_nuinteceptOrbit
-                                closestState = fromOrbitAndTrueAnomalyToState body interceptOrbit trueAnomalyOfTarget
-                              in position closestState
+                predictAtAnomaly    :: CelestialBody -> Vector3 -> Vector3 -> Vector3 -> Angle -> Vector3 -> Double -> Place
+                predictAtAnomaly body _OA _OX _harr beta direction speed
+                                    = let
+                                        _AB = speed *^ direction  -- predicted velocity
+                                        interceptOrbit = fromStateToOrbit body (IState _OA _AB)
+                                        _mu     = _mubody body
+                                        _earr = eccentricityVector _OA _AB _harr _mu
+                                        -- ASSERT calcSignedAngle _earr _OA == _nu interceptOrbit
+                                        _nu_t = beta + _nu interceptOrbit -- with proper handedness! (direction of rotation)
+                                        IState ipos ivel = fromOrbitAndTrueAnomalyToState body interceptOrbit _nu_t
+                                      in ipos
+--                                      traceShow (calcSignedAngle _earr _OA _AB - _nu interceptOrbit) $
 
 univariateMin      :: Double -> Double -> (Double -> Double) -> Double
 univariateMin min max f = let guide = C.easyOptimize f (min, max) 100 (mkStdGen 0) in C.pt guide
---                            where bnds = C.PsoGuide min max
+
