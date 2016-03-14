@@ -13,7 +13,7 @@
 -----------------------------------------------------------------------------
 
 module Physics.Coordinates.Rotating (
-    EmbeddedFrameOfReference,
+    EmbeddedNonInertialFrameOfReference,
     InertialCoordinates (InertialCoordinates),
     RotatingCoordinates (GlobalSystem, RotatingCoordinates),
     globalPlace, localPlace,
@@ -43,9 +43,9 @@ module Physics.Coordinates.Rotating (
     calcTorque,
 ) where
 
-import Physics.Coordinates.Inertial
-
 import Physics.Primitives
+
+import Physics.Coordinates.Inertial
 import Physics.Elementary
 import Physics.Time
 
@@ -63,7 +63,7 @@ instance FrameOfReference RotatingCoordinates where
 instance NonInertialFrameOfReference RotatingCoordinates where
     systemAngularVelocity       = angularVelocity
 
-class (FrameOfReference e) => EmbeddedFrameOfReference e where
+class (NonInertialFrameOfReference e) => EmbeddedNonInertialFrameOfReference e where
     globalPlace                 :: e -> Place -> Place
     localPlace                  :: e -> Place -> Place
 
@@ -79,6 +79,17 @@ class (FrameOfReference e) => EmbeddedFrameOfReference e where
 
 
 instance EmbeddedFrameOfReference RotatingCoordinates where
+    toParentVelocity GlobalSystem _ _ = error "cannot find parent of global system"
+    toParentVelocity system localPlace localVel
+                                = systemVelocity system
+                                  + orientVector (zeroOrientation system) (localVel + rotationVelocity (angularVelocity system) localPlace)
+
+    toChildVelocity GlobalSystem _ _ = error "cannot find parent of global system"
+    toChildVelocity system childPlace parentVel
+                                = parentVel - systemVelocity system
+                                  - orientVector (zeroOrientation system) (rotationVelocity (angularVelocity system) childPlace)
+
+instance EmbeddedNonInertialFrameOfReference RotatingCoordinates where
     globalPlace                 = toGlobal parent toParentPlace
     globalAcceleration          = toGlobal parent (\system accel -> orientVector (zeroOrientation system) accel)
     globalOrientation           = toGlobal parent (\system orient -> orientVector (zeroOrientation system) orient)
@@ -90,27 +101,9 @@ instance EmbeddedFrameOfReference RotatingCoordinates where
     localState state@(StateTriplet _ _ frame)
                                 = toLocal parent toChildState frame state
 
+
 setPlaceAndUpdateVelocity   :: RotatingCoordinates -> Place -> (Velocity -> Velocity) -> RotatingCoordinates
 setPlaceAndUpdateVelocity system place fVel = system {inertial = (inertial system) {location = place, velocity = fVel (systemVelocity system)}}
-
-toParentPlace               :: RotatingCoordinates -> Place -> Place
-toParentPlace GlobalSystem _= error "cannot find parent of global system"
-toParentPlace system place  = orientVector (zeroOrientation system) place + zeroLocation system
-
-toChildPlace                :: RotatingCoordinates -> Place -> Place
-toChildPlace system place   = reverseOrientVector (zeroOrientation system) (zeroLocation system - place)
-
-toParentVelocity            :: RotatingCoordinates -> Place -> Velocity -> Velocity
-toParentVelocity GlobalSystem _ _ = error "cannot find parent of global system"
-toParentVelocity system localPlace localVel
-                            = localVel + systemVelocity system
-                              + orientVector (zeroOrientation system) (rotationVelocity (angularVelocity system) localPlace)
-
-toChildVelocity             :: RotatingCoordinates -> Place -> Velocity -> Velocity
-toChildVelocity GlobalSystem _ _ = error "cannot find parent of global system"
-toChildVelocity system childPlace parentVel
-                            = parentVel - systemVelocity system
-                              - orientVector (zeroOrientation system) (rotationVelocity (angularVelocity system) childPlace)
 
 toParentState               :: RotatingCoordinates -> StateTriplet RotatingCoordinates -> StateTriplet RotatingCoordinates
 toParentState system (StateTriplet localPlace localVelocity frame)
