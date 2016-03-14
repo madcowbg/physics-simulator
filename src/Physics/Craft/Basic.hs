@@ -20,7 +20,8 @@ module Physics.Craft.Basic (
     changeOrientation, changePosition
 ) where
 
-import Physics.Coordinates
+import Physics.Coordinates.Inertial
+import Physics.Coordinates.Rotating
 import Physics.Elementary
 import Physics.AbstractForces
 import Physics.Time

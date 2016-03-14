@@ -19,10 +19,10 @@ module Physics.Forces (
     AirResistance (AirResistance)
 ) where
 
-
+import Physics.Coordinates.Inertial
 import Physics.Elementary
 import Physics.Primitives
-import Physics.Coordinates
+import Physics.Coordinates.Rotating
 import Physics.AbstractForces
 import Physics.Time
 

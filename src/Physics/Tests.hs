@@ -16,7 +16,7 @@ module Physics.Tests (
     runBasicDemo
 ) where
 
-import Physics.Coordinates
+import Physics.Coordinates.Rotating
 import Physics.Elementary
 import Physics.Craft.Basic
 import Physics.World.Basic

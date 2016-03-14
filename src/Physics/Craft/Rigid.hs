@@ -18,7 +18,8 @@ module Physics.Craft.Rigid (
     createRigid
 ) where
 import Physics.Elementary
-import Physics.Coordinates
+import Physics.Coordinates.Inertial
+import Physics.Coordinates.Rotating
 import Physics.AbstractForces
 import Physics.Time
 import Physics.Forces

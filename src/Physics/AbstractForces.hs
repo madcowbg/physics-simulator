@@ -23,8 +23,8 @@ module Physics.AbstractForces (
     PhysicalObj, objMass,
 ) where
 
+import Physics.Coordinates.Inertial
 import Physics.Elementary
-import Physics.Coordinates
 import Physics.Time
 
 class ShockableObj o where

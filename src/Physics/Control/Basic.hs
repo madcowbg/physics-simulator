@@ -20,7 +20,7 @@ module Physics.Control.Basic (
     -- TODO hide
     maxPower, percentThrust, thrustDirection,
 ) where
-import Physics.Coordinates
+import Physics.Coordinates.Rotating
 import Physics.Elementary
 import Physics.AbstractForces
 import Physics.Time

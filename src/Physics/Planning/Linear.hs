@@ -17,7 +17,7 @@ module Physics.Planning.Linear (
 ) where
 
 import Physics.Elementary
-import Physics.Coordinates
+import Physics.Coordinates.Rotating
 import Physics.Primitives
 --
 --import Linear

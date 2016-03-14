@@ -19,7 +19,8 @@ module Physics.BasicDraw (
 import Linear.Matrix
 
 import Physics.Primitives
-import Physics.Coordinates
+import Physics.Coordinates.Inertial
+import Physics.Coordinates.Rotating
 import Physics.Elementary
 import Physics.Craft.Basic
 import Physics.Forces

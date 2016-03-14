@@ -16,7 +16,7 @@ module Physics.Craft.Rocket (
     Rocket (Rocket), hull, rocketThrusters,
     Thruster (Thruster),
 ) where
-import Physics.Coordinates
+import Physics.Coordinates.Rotating
 import Physics.Elementary
 import Physics.Craft.Basic
 import Physics.Craft.Rigid

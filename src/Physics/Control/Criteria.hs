@@ -21,7 +21,8 @@ module Physics.Control.Criteria (
 
 ) where
 
-import Physics.Coordinates
+import Physics.Coordinates.Rotating
+import Physics.Coordinates.Inertial
 import Physics.Elementary
 import Physics.Craft.Basic
 import Physics.Control.Basic
