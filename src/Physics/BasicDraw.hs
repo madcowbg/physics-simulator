@@ -60,7 +60,7 @@ drawOrient coordinates
 
 angle           :: (EmbeddedNonInertialFrameOfReference f) => f -> Float
 angle coordinates = -radToDeg (argV pt)
-                    where acted = globalOrientation coordinates (makevect 1.0 0 0)
+                    where acted = directionFrom coordinates (makevect 1.0 0 0)
                           pt = (double2Float (xcoord acted), double2Float(zcoord acted))
 
 drawAction                              :: ForceAction -> Picture
@@ -89,7 +89,7 @@ instance Drawable Rocket where
                         ++ [color (light green) $ drawOrbitY 100 (IState (interceptPos + bodyCenter) interceptVel)]
                         ++ [color (dark green) $ drawOrbitY (-100) (IState (progradeInterceptPos + bodyCenter) progradeInterceptVel)]
                         )-- ++ map (color (dark green) . drawAction)) (thrustActions rocket (Tick 1.0 ))
-              where (StateTriplet craftPlace craftVel _) = globalState (StateTriplet origin atrest coordinates)
+              where (StateTriplet craftPlace craftVel) = stateFrom coordinates (StateTriplet origin atrest)
                     IState interceptPos interceptVel = calculateSigleStepNeededVelocity body
                                         (IState (craftPlace - bodyCenter) craftVel) (target - bodyCenter) (5)
                     IState progradeInterceptPos progradeInterceptVel = calculateSigleStepProgradeBurn body
@@ -105,7 +105,7 @@ body = CelestialBody (5 * (bodyOffset ** 2))
 
 drawOrbit           :: (EmbeddedNonInertialFrameOfReference f) => Float -> f -> Picture
 drawOrbit offset system    = let
-                        (StateTriplet place vel _) = globalState (StateTriplet origin atrest system)
+                        (StateTriplet place vel) = stateFrom system (StateTriplet origin atrest)
                       in drawOrbitZ offset place vel
 
 drawOrbitY          :: Float -> IState -> Picture
@@ -138,7 +138,7 @@ writeOrbitDescription offset (Orbit (OrbitalParams _a _e _i _omega _Omega) _nu _
 
 drawLocalVelocities :: (EmbeddedNonInertialFrameOfReference f) => f -> Velocity -> RigidPointObj -> Picture
 drawLocalVelocities system craftVel obj
-                    = let (StateTriplet place vel _) = globalState (StateTriplet (objPlace obj) atrest system)
+                    = let (StateTriplet place vel) = stateFrom system (StateTriplet (objPlace obj) atrest)
                       in drawVector place (5 * (vel - craftVel))
 
 drawVelocity place velocity
@@ -148,7 +148,7 @@ drawVelocity place velocity
 drawRelativeToCraft         :: RigidCraft -> Picture -> Picture
 drawRelativeToCraft (RigidCraft parts coordinates ground) p
                             = translateD (xcoord place) (zcoord place) $ rotate (angle coordinates) p
-                              where place = globalPlace coordinates origin
+                              where place = placeFrom coordinates origin
 
 drawCenter (RigidCraft parts _ _)
                             = line (map ptCoord (parts ++ [head parts]))--[(-10, -15), (0, 15), (10,-15), (-10,-15)]

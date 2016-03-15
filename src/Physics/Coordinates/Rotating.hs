@@ -16,10 +16,10 @@ module Physics.Coordinates.Rotating (
     EmbeddedNonInertialFrameOfReference,
     InertialCoordinates (InertialCoordinates),
     RotatingCoordinates (GlobalSystem, RotatingCoordinates),
-    globalPlace, localPlace,
-    localAcceleration, globalAcceleration,
-    globalState, localState,
-    globalOrientation,
+--    globalPlace, localPlace,
+--    localAcceleration, globalAcceleration,
+--    globalState, localState,
+--    globalOrientation,
     --------
     Rotatable, changeOrientation,
     Movable, changePosition,
@@ -63,19 +63,19 @@ instance FrameOfReference RotatingCoordinates where
 instance NonInertialFrameOfReference RotatingCoordinates where
     systemAngularVelocity       = angularVelocity
 
-class (NonInertialFrameOfReference e) => EmbeddedNonInertialFrameOfReference e where
-    globalPlace                 :: e -> Place -> Place
-    localPlace                  :: e -> Place -> Place
-
-    -- accelleration is just rotated
-    localAcceleration          :: e -> Acceleration -> Acceleration
-
-    globalAcceleration         :: e -> Acceleration -> Acceleration
-    globalOrientation          :: e -> Place -> Place
-
-
-    globalState                 :: StateTriplet e -> StateTriplet e
-    localState                  :: StateTriplet e -> StateTriplet e
+class (NonInertialFrameOfReference e, EmbeddedFrameOfReference e) => EmbeddedNonInertialFrameOfReference e where
+--    globalPlace                 :: e -> Place -> Place
+--    localPlace                  :: e -> Place -> Place
+--
+--    -- accelleration is just rotated
+--    localAcceleration          :: e -> Acceleration -> Acceleration
+--
+--    globalAcceleration         :: e -> Acceleration -> Acceleration
+--    globalOrientation          :: e -> Place -> Place
+--
+--
+--    globalState                 :: StateTriplet e -> StateTriplet e
+--    localState                  :: StateTriplet e -> StateTriplet e
 
 
 instance EmbeddedFrameOfReference RotatingCoordinates where
@@ -90,16 +90,16 @@ instance EmbeddedFrameOfReference RotatingCoordinates where
                                   - orientVector (zeroOrientation system) (rotationVelocity (angularVelocity system) childPlace)
 
 instance EmbeddedNonInertialFrameOfReference RotatingCoordinates where
-    globalPlace                 = toGlobal parent placeFrom
-    globalAcceleration          = toGlobal parent (\system accel -> orientVector (zeroOrientation system) accel)
-    globalOrientation           = toGlobal parent (\system orient -> orientVector (zeroOrientation system) orient)
-    globalState state@(StateTriplet _ _ frame)
-                                = toGlobal parent stateFrom frame state
-
-    localPlace                  = toLocal parent placeTo
-    localAcceleration           = toLocal parent (\system accel -> reverseOrientVector (zeroOrientation system) accel)
-    localState state@(StateTriplet _ _ frame)
-                                = toLocal parent stateTo frame state
+--    globalPlace                 = toGlobal parent placeFrom
+--    globalAcceleration          = toGlobal parent (\system accel -> orientVector (zeroOrientation system) accel)
+--    globalOrientation           = toGlobal parent (\system orient -> orientVector (zeroOrientation system) orient)
+--    globalState state@(StateTriplet _ _ frame)
+--                                = toGlobal parent stateFrom frame state
+--
+--    localPlace                  = toLocal parent placeTo
+--    localAcceleration           = toLocal parent (\system accel -> reverseOrientVector (zeroOrientation system) accel)
+--    localState state@(StateTriplet _ _ frame)
+--                                = toLocal parent stateTo frame state
 
 
 setPlaceAndUpdateVelocity   :: RotatingCoordinates -> Place -> (Velocity -> Velocity) -> RotatingCoordinates

@@ -49,13 +49,13 @@ steerCraft state craft      = applyControls craft (thrustersState state)
 
 -- | compares the place of the craft with the target place
 comparePlace            :: Craft c => c -> Place -> Double
-comparePlace craft place= distance (localPlace (craftCoordinates craft) place)
+comparePlace craft place= distance (placeTo (craftCoordinates craft) place)
 
 -- | compares the velocity of the craft with the target velocity
 compareVelocity         :: Craft c => c -> Velocity -> Double
 compareVelocity craft velocity
                         = distance localVelocity
-                          where (StateTriplet _ localVelocity _) = localState (StateTriplet origin velocity (craftCoordinates craft))
+                          where (StateTriplet _ localVelocity) = stateTo (craftCoordinates craft) (StateTriplet origin velocity)
 
 -- TODO compareOrientation
 

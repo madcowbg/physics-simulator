@@ -17,7 +17,8 @@ module Physics.Coordinates.Inertial (
     StateTriplet (StateTriplet),
     InertialCoordinates (InertialCoordinates), location, velocity, orientation,
     Movable, changePosition,
-    EmbeddedFrameOfReference, placeFrom, placeTo, velocityFrom, velocityTo, stateFrom, stateTo,
+    EmbeddedFrameOfReference, placeFrom, placeTo, velocityFrom, velocityTo, stateFrom, stateTo, accelerationFrom, accelerationTo,
+    directionFrom,
 ) where
 
 import Physics.Elementary
@@ -25,7 +26,7 @@ import Physics.Time
 import Physics.Primitives
 
 
-data (FrameOfReference f) => StateTriplet f = StateTriplet {locationInFrame :: Place, velocityInFrame :: Velocity, frame :: f}
+data (FrameOfReference f) => StateTriplet f = StateTriplet {locationInFrame :: Place, velocityInFrame :: Velocity}
 
 class FrameOfReference s where
     zeroLocation :: s -> Place
@@ -40,17 +41,26 @@ class (FrameOfReference f) => EmbeddedFrameOfReference f where
     placeTo system place    = reverseOrientVector (zeroOrientation system) (zeroLocation system - place)
 
     velocityFrom            :: f -> Place -> Velocity -> Velocity
-    velocityTo             :: f -> Place -> Velocity -> Velocity
+    velocityTo              :: f -> Place -> Velocity -> Velocity
+
+    accelerationFrom        :: f -> Acceleration -> Acceleration
+    accelerationFrom system = orientVector (zeroOrientation system)
+
+    accelerationTo          :: f -> Acceleration -> Acceleration
+    accelerationTo system   = reverseOrientVector (zeroOrientation system)
 
     stateFrom               :: f -> StateTriplet f -> StateTriplet f
-    stateFrom system (StateTriplet localPlace localVelocity frame)
+    stateFrom system (StateTriplet localPlace localVelocity)
                                 = let parentPlace = placeFrom system localPlace
-                                  in StateTriplet parentPlace (velocityFrom system localPlace localVelocity) system
+                                  in StateTriplet parentPlace (velocityFrom system localPlace localVelocity)
 
-    stateTo                :: f -> StateTriplet f -> StateTriplet f
-    stateTo system (StateTriplet parentPlace parentVelocity frame)
+    stateTo                 :: f -> StateTriplet f -> StateTriplet f
+    stateTo system (StateTriplet parentPlace parentVelocity)
                                 = let childPlace = placeTo system parentPlace
-                                  in StateTriplet childPlace (velocityTo system childPlace parentVelocity) system
+                                  in StateTriplet childPlace (velocityTo system childPlace parentVelocity)
+
+    directionFrom           :: f -> Place -> Place
+    directionFrom system    = orientVector (zeroOrientation system)
 
 data InertialCoordinates = InertialCoordinates {location :: Place, velocity :: Velocity, orientation :: Orientation}
 

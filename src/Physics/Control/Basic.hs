@@ -21,6 +21,7 @@ module Physics.Control.Basic (
     maxPower, percentThrust, thrustDirection,
 ) where
 import Physics.Coordinates.Rotating
+import Physics.Coordinates.Inertial
 import Physics.Elementary
 import Physics.AbstractForces
 import Physics.Time
@@ -41,8 +42,8 @@ data ThrusterForce = ThrusterForce {maxPower :: Double, thrustDirection :: Accel
 
 actThrust                   :: Tick -> RotatingCoordinates -> Thruster -> Velocity -> ForceAction
 actThrust (Tick s) coordinates thruster localVel
-                            = ForceAction (globalPlace coordinates (objPlace thruster))
-                          (scaleForceAmount (globalAcceleration coordinates (thrustDirection thrusterForce)) (-s * maxPower thrusterForce * percentThrust thruster))
+                            = ForceAction (placeFrom coordinates (objPlace thruster))
+                          (scaleForceAmount (accelerationFrom coordinates (thrustDirection thrusterForce)) (-s * maxPower thrusterForce * percentThrust thruster))
                             where thrusterForce = force thruster
 
 class (Craft cc) => ControlledCraft cc where

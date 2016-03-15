@@ -32,7 +32,7 @@ class PotentialForce f where
 instance PotentialForce Gravity where
     potentialEnergy force system obj
                         = -scalarProduct (gravityDirection force) place * gravityConstant force * objMass obj
-                            where place = globalPlace system (objPlace obj)
+                            where place = placeFrom system (objPlace obj)
 
 class HasEnergy o where
     calcPotential      :: (PotentialForce f, HasEnergy o) => f -> o -> Double
@@ -46,4 +46,4 @@ instance HasEnergy Rocket where
 --    calcEnergy force o = potentialEnergy force
 
 kineticEnergy       :: RotatingCoordinates -> RigidPointObj -> Double
-kineticEnergy system obj = let (StateTriplet _ velocity _) = globalState (StateTriplet (objPlace obj) atrest system) in scalarProduct velocity velocity * objMass obj / 2
+kineticEnergy system obj = let (StateTriplet _ velocity) = stateFrom system (StateTriplet (objPlace obj) atrest) in scalarProduct velocity velocity * objMass obj / 2

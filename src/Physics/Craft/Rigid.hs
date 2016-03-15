@@ -33,12 +33,12 @@ createRigid p c g       = centerCraft (RigidCraft p c g)
 
 
 instance ShockableObj RigidCraft where
-    objPlace craft              = globalPlace (coordinates craft) origin
+    objPlace craft              = placeFrom (coordinates craft) origin
 
 instance Craft RigidCraft where
     massiveParts                = parts
 
-    craftActions craft t        = [shock (ground craft) t (globalState (StateTriplet origin atrest (coordinates craft))) craft]
+    craftActions craft t        = [shock (ground craft) t (stateFrom (coordinates craft) (StateTriplet origin atrest)) craft]
 
     craftCoordinates            = coordinates
 

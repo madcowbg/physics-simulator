@@ -68,7 +68,7 @@ class (Movable c, Rotatable c, ShockableObj c) => Craft c where
 
 globalReference     :: (Craft c) => c -> RigidPointObj -> StateTriplet RotatingCoordinates
 globalReference craft p
-                    = globalState (StateTriplet (objPlace p) atrest (craftCoordinates craft))
+                    = stateFrom (craftCoordinates craft) (StateTriplet (objPlace p) atrest)
 
 executeActions      :: (Craft c) => [ShockAction] -> [ForceAction] -> c -> c
 executeActions shocks actions craft
@@ -77,10 +77,10 @@ executeActions shocks actions craft
                                     system = craftCoordinates craft
 
 accelerate          :: (Craft c) => RotatingCoordinates -> ForceAmount -> c -> c
-accelerate system f c      = changeCoordinates c (changeVelocity (globalAcceleration system (asAcceleration f (mass c))))
+accelerate system f c      = changeCoordinates c (changeVelocity (accelerationFrom system (asAcceleration f (mass c))))
 
 spin              :: (Craft c) => RotatingCoordinates -> Torque -> c -> c
-spin system torque c     = changeCoordinates c (changeAngularVelocity (globalAcceleration system (asAngularAcceleration torque (inertiaTensor c))))
+spin system torque c     = changeCoordinates c (changeAngularVelocity (accelerationFrom system (asAngularAcceleration torque (inertiaTensor c))))
 
 aggregateActions    :: [ForceAction] -> (ForceAmount, Torque)
 aggregateActions actions
@@ -95,7 +95,7 @@ forceTorque (ForceAction place amt)
 
 localAction         :: RotatingCoordinates -> ForceAction -> ForceAction
 localAction system (ForceAction globalPlace forceAmt)
-                    = ForceAction (localPlace system globalPlace) (localAcceleration system forceAmt)
+                    = ForceAction (placeTo system globalPlace) (accelerationTo system forceAmt)
 
 coordinatesShock                :: [ShockAction] -> RotatingCoordinates -> RotatingCoordinates
 coordinatesShock [] system      = system
