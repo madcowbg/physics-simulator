@@ -17,7 +17,7 @@ module Physics.Coordinates.Inertial (
     StateTriplet (StateTriplet),
     InertialCoordinates (InertialCoordinates), location, velocity, orientation,
     Movable, changePosition,
-    EmbeddedFrameOfReference, toParentPlace, toChildPlace, toParentVelocity, toChildVelocity
+    EmbeddedFrameOfReference, placeFrom, placeTo, velocityFrom, velocityTo, stateFrom, stateTo,
 ) where
 
 import Physics.Elementary
@@ -33,14 +33,24 @@ class FrameOfReference s where
     systemVelocity    :: s -> Velocity
 
 class (FrameOfReference f) => EmbeddedFrameOfReference f where
-    toParentPlace               :: f -> Place -> Place
-    toParentPlace system place  = orientVector (zeroOrientation system) place + zeroLocation system
+    placeFrom               :: f -> Place -> Place
+    placeFrom system place  = orientVector (zeroOrientation system) place + zeroLocation system
 
-    toChildPlace                :: f -> Place -> Place
-    toChildPlace system place   = reverseOrientVector (zeroOrientation system) (zeroLocation system - place)
+    placeTo                 :: f -> Place -> Place
+    placeTo system place    = reverseOrientVector (zeroOrientation system) (zeroLocation system - place)
 
-    toParentVelocity            :: f -> Place -> Velocity -> Velocity
-    toChildVelocity             :: f -> Place -> Velocity -> Velocity
+    velocityFrom            :: f -> Place -> Velocity -> Velocity
+    velocityTo             :: f -> Place -> Velocity -> Velocity
+
+    stateFrom               :: f -> StateTriplet f -> StateTriplet f
+    stateFrom system (StateTriplet localPlace localVelocity frame)
+                                = let parentPlace = placeFrom system localPlace
+                                  in StateTriplet parentPlace (velocityFrom system localPlace localVelocity) system
+
+    stateTo                :: f -> StateTriplet f -> StateTriplet f
+    stateTo system (StateTriplet parentPlace parentVelocity frame)
+                                = let childPlace = placeTo system parentPlace
+                                  in StateTriplet childPlace (velocityTo system childPlace parentVelocity) system
 
 data InertialCoordinates = InertialCoordinates {location :: Place, velocity :: Velocity, orientation :: Orientation}
 
@@ -50,10 +60,10 @@ instance FrameOfReference InertialCoordinates where
     systemVelocity              = velocity
 
 instance EmbeddedFrameOfReference InertialCoordinates where
-    toParentVelocity system localPlace localVel
+    velocityFrom system localPlace localVel
                                 = systemVelocity system + orientVector (zeroOrientation system) localVel
 
-    toChildVelocity system childPlace parentVel
+    velocityTo system childPlace parentVel
                                 = reverseOrientVector (zeroOrientation system) (parentVel - systemVelocity system)
 class Movable m where
     changePosition          :: Tick -> m -> m

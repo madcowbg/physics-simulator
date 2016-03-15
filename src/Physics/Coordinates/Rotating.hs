@@ -79,41 +79,31 @@ class (NonInertialFrameOfReference e) => EmbeddedNonInertialFrameOfReference e w
 
 
 instance EmbeddedFrameOfReference RotatingCoordinates where
-    toParentVelocity GlobalSystem _ _ = error "cannot find parent of global system"
-    toParentVelocity system localPlace localVel
+    velocityFrom GlobalSystem _ _ = error "cannot find parent of global system"
+    velocityFrom system localPlace localVel
                                 = systemVelocity system
                                   + orientVector (zeroOrientation system) (localVel + rotationVelocity (angularVelocity system) localPlace)
 
-    toChildVelocity GlobalSystem _ _ = error "cannot find parent of global system"
-    toChildVelocity system childPlace parentVel
+    velocityTo GlobalSystem _ _ = error "cannot find parent of global system"
+    velocityTo system childPlace parentVel
                                 = parentVel - systemVelocity system
                                   - orientVector (zeroOrientation system) (rotationVelocity (angularVelocity system) childPlace)
 
 instance EmbeddedNonInertialFrameOfReference RotatingCoordinates where
-    globalPlace                 = toGlobal parent toParentPlace
+    globalPlace                 = toGlobal parent placeFrom
     globalAcceleration          = toGlobal parent (\system accel -> orientVector (zeroOrientation system) accel)
     globalOrientation           = toGlobal parent (\system orient -> orientVector (zeroOrientation system) orient)
     globalState state@(StateTriplet _ _ frame)
-                                = toGlobal parent toParentState frame state
+                                = toGlobal parent stateFrom frame state
 
-    localPlace                  = toLocal parent toChildPlace
+    localPlace                  = toLocal parent placeTo
     localAcceleration           = toLocal parent (\system accel -> reverseOrientVector (zeroOrientation system) accel)
     localState state@(StateTriplet _ _ frame)
-                                = toLocal parent toChildState frame state
+                                = toLocal parent stateTo frame state
 
 
 setPlaceAndUpdateVelocity   :: RotatingCoordinates -> Place -> (Velocity -> Velocity) -> RotatingCoordinates
 setPlaceAndUpdateVelocity system place fVel = system {inertial = (inertial system) {location = place, velocity = fVel (systemVelocity system)}}
-
-toParentState               :: RotatingCoordinates -> StateTriplet RotatingCoordinates -> StateTriplet RotatingCoordinates
-toParentState system (StateTriplet localPlace localVelocity frame)
-                            = let parentPlace = toParentPlace system localPlace
-                              in StateTriplet parentPlace (toParentVelocity system localPlace localVelocity) system
-
-toChildState                :: RotatingCoordinates -> StateTriplet RotatingCoordinates -> StateTriplet RotatingCoordinates
-toChildState system (StateTriplet parentPlace parentVelocity frame)
-                            = let childPlace = toChildPlace system parentPlace
-                              in StateTriplet childPlace (toChildVelocity system childPlace parentVelocity) system
 
 toLocal                        :: (RotatingCoordinates -> RotatingCoordinates) -> (RotatingCoordinates -> a -> a) -> RotatingCoordinates -> a -> a
 toLocal f g GlobalSystem val   = val
