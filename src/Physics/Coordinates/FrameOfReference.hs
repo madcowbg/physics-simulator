@@ -21,7 +21,7 @@ import Physics.Elementary
 import Physics.Primitives
 
 
-data (FrameOfReference f) => StateTriplet f = StateTriplet {locationInFrame :: Place, velocityInFrame :: Velocity}
+data StateTriplet = StateTriplet {locationInFrame :: Place, velocityInFrame :: Velocity}
 
 class FrameOfReference s where
     zeroLocation :: s -> Place
@@ -44,12 +44,12 @@ class (FrameOfReference f) => EmbeddedFrameOfReference f where
     accelerationTo          :: f -> Acceleration -> Acceleration
     accelerationTo system   = reverseOrientVector (zeroOrientation system)
 
-    stateFrom               :: f -> StateTriplet f -> StateTriplet f
+    stateFrom               :: f -> StateTriplet -> StateTriplet
     stateFrom system (StateTriplet localPlace localVelocity)
                                 = let parentPlace = placeFrom system localPlace
                                   in StateTriplet parentPlace (velocityFrom system localPlace localVelocity)
 
-    stateTo                 :: f -> StateTriplet f -> StateTriplet f
+    stateTo                 :: f -> StateTriplet -> StateTriplet
     stateTo system (StateTriplet parentPlace parentVelocity)
                                 = let childPlace = placeTo system parentPlace
                                   in StateTriplet childPlace (velocityTo system childPlace parentVelocity)

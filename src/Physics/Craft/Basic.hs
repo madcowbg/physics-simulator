@@ -66,7 +66,7 @@ class (Movable c, Rotatable c, ShockableObj c) => Craft c where
 
     changeCoordinates   :: c -> (RotatingCoordinates -> RotatingCoordinates) -> c
 
-globalReference     :: (Craft c) => c -> RigidPointObj -> StateTriplet RotatingCoordinates
+globalReference     :: (Craft c) => c -> RigidPointObj -> StateTriplet
 globalReference craft p
                     = stateFrom (craftCoordinates craft) (StateTriplet (objPlace p) atrest)
 
