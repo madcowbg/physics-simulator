@@ -55,11 +55,11 @@ instance Drawable SmallWorld where
                         ++ map (drawEnergy gravity) crafts
                         ++ [drawCircle target 10])
 
-drawOrient      :: (EmbeddedNonInertialFrameOfReference f) => f -> Picture
+drawOrient      :: (EmbeddedFrameOfReference f) => f -> Picture
 drawOrient coordinates
                 = rotate (angle coordinates) $ line [(0,0), (0, 100)]
 
-angle           :: (EmbeddedNonInertialFrameOfReference f) => f -> Float
+angle           :: (EmbeddedFrameOfReference f) => f -> Float
 angle coordinates = -radToDeg (argV pt)
                     where acted = directionFrom coordinates (makevect 1.0 0 0)
                           pt = (double2Float (xcoord acted), double2Float(zcoord acted))
@@ -104,7 +104,7 @@ bodyOffset = 1000000
 bodyCenter = makevect 0 0 (-bodyOffset)
 body = CelestialBody (5 * (bodyOffset ** 2))
 
-drawOrbit           :: (EmbeddedNonInertialFrameOfReference f) => Float -> f -> Picture
+drawOrbit           :: (EmbeddedFrameOfReference f) => Float -> f -> Picture
 drawOrbit offset system    = let
                         (StateTriplet place vel) = stateFrom system (StateTriplet origin atrest)
                       in drawOrbitZ offset place vel
@@ -137,7 +137,7 @@ writeOrbitDescription offset (Orbit (OrbitalParams _a _e _i _omega _Omega) _nu _
                         $ appendLine ("_nu = " ++ showFixedHighPrecision _nu)
                         $ appendLine ("_M = " ++ showFixedHighPrecision _M) blank
 
-drawLocalVelocities :: (EmbeddedNonInertialFrameOfReference f) => f -> Velocity -> RigidPointObj -> Picture
+drawLocalVelocities :: (EmbeddedFrameOfReference f) => f -> Velocity -> RigidPointObj -> Picture
 drawLocalVelocities system craftVel obj
                     = let (StateTriplet place vel) = stateFrom system (StateTriplet (objPlace obj) atrest)
                       in drawVector place (5 * (vel - craftVel))

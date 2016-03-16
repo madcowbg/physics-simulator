@@ -13,12 +13,8 @@
 -----------------------------------------------------------------------------
 
 module Physics.Coordinates.Rotating (
-    EmbeddedNonInertialFrameOfReference,
     RotatingCoordinates (GlobalSystem, RotatingCoordinates),
---    globalPlace, localPlace,
---    localAcceleration, globalAcceleration,
---    globalState, localState,
---    globalOrientation,
+
     --------
     Rotatable, changeOrientation,
     Movable, changePosition,
@@ -63,21 +59,6 @@ instance FrameOfReference RotatingCoordinates where
 instance NonInertialFrameOfReference RotatingCoordinates where
     systemAngularVelocity       = angularVelocity
 
-class (NonInertialFrameOfReference e, EmbeddedFrameOfReference e) => EmbeddedNonInertialFrameOfReference e where
---    globalPlace                 :: e -> Place -> Place
---    localPlace                  :: e -> Place -> Place
---
---    -- accelleration is just rotated
---    localAcceleration          :: e -> Acceleration -> Acceleration
---
---    globalAcceleration         :: e -> Acceleration -> Acceleration
---    globalOrientation          :: e -> Place -> Place
---
---
---    globalState                 :: StateTriplet e -> StateTriplet e
---    localState                  :: StateTriplet e -> StateTriplet e
-
-
 instance EmbeddedFrameOfReference RotatingCoordinates where
     velocityFrom GlobalSystem _ _ = error "cannot find parent of global system"
     velocityFrom system localPlace localVel
@@ -89,30 +70,9 @@ instance EmbeddedFrameOfReference RotatingCoordinates where
                                 = parentVel - systemVelocity system
                                   - orientVector (zeroOrientation system) (rotationVelocity (angularVelocity system) childPlace)
 
-instance EmbeddedNonInertialFrameOfReference RotatingCoordinates where
---    globalPlace                 = toGlobal parent placeFrom
---    globalAcceleration          = toGlobal parent (\system accel -> orientVector (zeroOrientation system) accel)
---    globalOrientation           = toGlobal parent (\system orient -> orientVector (zeroOrientation system) orient)
---    globalState state@(StateTriplet _ _ frame)
---                                = toGlobal parent stateFrom frame state
---
---    localPlace                  = toLocal parent placeTo
---    localAcceleration           = toLocal parent (\system accel -> reverseOrientVector (zeroOrientation system) accel)
---    localState state@(StateTriplet _ _ frame)
---                                = toLocal parent stateTo frame state
-
 
 setPlaceAndUpdateVelocity   :: RotatingCoordinates -> Place -> (Velocity -> Velocity) -> RotatingCoordinates
 setPlaceAndUpdateVelocity system place fVel = system {inertial = (inertial system) {location = place, velocity = fVel (systemVelocity system)}}
-
-toLocal                        :: (RotatingCoordinates -> RotatingCoordinates) -> (RotatingCoordinates -> a -> a) -> RotatingCoordinates -> a -> a
-toLocal f g GlobalSystem val   = val
-toLocal f g system place       = g system (toLocal f g (f system) place)
-
-toGlobal                      :: (RotatingCoordinates -> RotatingCoordinates) -> (RotatingCoordinates -> a -> a) -> RotatingCoordinates -> a -> a
-toGlobal f g GlobalSystem val = val
-toGlobal f g system val       = toGlobal f g (f system) (g system val)
-
 
 class Rotatable r where
     changeOrientation       :: Tick -> r -> r
@@ -139,6 +99,7 @@ instance Torqueable RotatingCoordinates where
     changeAngularVelocity angularAcceleration system
                         = system {angularVelocity = integrateAngularVelocity (systemAngularVelocity system) angularAcceleration}
 
+-- TODO distribute those below to separate classes
 sumForcesAmount     = vectorSum
 scaleForceAmount    = vectorScale
 scaleAccelleration  = vectorScale
