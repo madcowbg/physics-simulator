@@ -19,6 +19,7 @@ module Physics.BasicDraw (
 import Linear.Matrix
 
 import Physics.Primitives
+import Physics.Coordinates.FrameOfReference
 import Physics.Coordinates.Inertial
 import Physics.Coordinates.Rotating
 import Physics.Elementary

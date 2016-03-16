@@ -23,7 +23,7 @@ module Physics.AbstractForces (
     PhysicalObj, objMass,
 ) where
 
-import Physics.Coordinates.Inertial
+import Physics.Coordinates.FrameOfReference
 import Physics.Elementary
 import Physics.Time
 

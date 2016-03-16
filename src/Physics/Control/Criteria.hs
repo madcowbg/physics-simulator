@@ -22,7 +22,7 @@ module Physics.Control.Criteria (
 ) where
 
 import Physics.Coordinates.Rotating
-import Physics.Coordinates.Inertial
+import Physics.Coordinates.FrameOfReference
 import Physics.Elementary
 import Physics.Craft.Basic
 import Physics.Control.Basic

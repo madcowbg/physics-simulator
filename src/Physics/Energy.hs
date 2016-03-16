@@ -18,7 +18,7 @@ module Physics.Energy (
     calcKinetic,
 ) where
 
-import Physics.Coordinates.Inertial
+import Physics.Coordinates.FrameOfReference
 import Physics.Coordinates.Rotating
 import Physics.Elementary
 import Physics.AbstractForces

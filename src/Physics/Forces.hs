@@ -19,7 +19,7 @@ module Physics.Forces (
     AirResistance (AirResistance)
 ) where
 
-import Physics.Coordinates.Inertial
+import Physics.Coordinates.FrameOfReference
 import Physics.Elementary
 import Physics.Primitives
 import Physics.Coordinates.Rotating

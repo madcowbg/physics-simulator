@@ -14,7 +14,6 @@
 
 module Physics.Coordinates.Rotating (
     EmbeddedNonInertialFrameOfReference,
-    InertialCoordinates (InertialCoordinates),
     RotatingCoordinates (GlobalSystem, RotatingCoordinates),
 --    globalPlace, localPlace,
 --    localAcceleration, globalAcceleration,
@@ -45,6 +44,7 @@ module Physics.Coordinates.Rotating (
 
 import Physics.Primitives
 
+import Physics.Coordinates.FrameOfReference
 import Physics.Coordinates.Inertial
 import Physics.Elementary
 import Physics.Time

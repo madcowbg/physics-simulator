@@ -21,7 +21,7 @@ module Physics.Control.Basic (
     maxPower, percentThrust, thrustDirection,
 ) where
 import Physics.Coordinates.Rotating
-import Physics.Coordinates.Inertial
+import Physics.Coordinates.FrameOfReference
 import Physics.Elementary
 import Physics.AbstractForces
 import Physics.Time
