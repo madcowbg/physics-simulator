@@ -22,7 +22,11 @@ module Physics.Orbit.Freefall (
     -- ?
     trueAnomaly, meanAnomaly,
     calculateSigleStepNeededVelocity,
-    calculateSigleStepProgradeBurn
+    calculateSigleStepProgradeBurn,
+    --- move
+    ScheduledBurn, endVelocity, endPosition, startVelocity,
+    calcEndOrbit, calcTotalDeltaV, calcDeltaV,
+    calculateStopBurn,
 ) where
 
 import qualified Linear.Quaternion as Q -- TODO move to primitives
@@ -142,7 +146,7 @@ ellipticalFromTrueAnomaly __e _nu
 meanFromEllipticalAnomaly       :: Double -> Double -> Double
 meanFromEllipticalAnomaly __e __E = __E - __e * sin __E
 
-trueToMeanAnomaly __e =  (meanFromEllipticalAnomaly __e . ellipticalFromTrueAnomaly __e)
+trueToMeanAnomaly __e =  meanFromEllipticalAnomaly __e . ellipticalFromTrueAnomaly __e
 
 _mubody body    = gravityConst * mass body
 
@@ -207,7 +211,7 @@ normalizeAngle f = f - 2 * pi * floor' (f / (2 * pi))
 
 
 -- now this gets interesting
-type DeltaV = Vector3
+--type DeltaV = Vector3
 
 --data TwoStepTrajectory = TwoStepTrajectory {interceptTime :: Double, alpha :: Angle, deltaVIntercept :: DeltaV, deltaVFinal :: DeltaV}
 --
@@ -248,11 +252,11 @@ type DeltaV = Vector3
 --                            _h = cross _OA _OX  -- normal of intercept trajectory (specific angular momentum)
 --
 
-calculateSigleStepProgradeBurn    :: CelestialBody -> IState -> Place-> IState
+calculateSigleStepProgradeBurn    :: CelestialBody -> IState -> Place -> [ScheduledBurn]
 calculateSigleStepProgradeBurn  body state@(IState position v) targetPlace
             = calculateSigleStepNeededVelocity body state targetPlace (calcSignedAngle position v v)
 
-calculateSigleStepNeededVelocity    :: CelestialBody -> IState -> Place -> Angle -> IState
+calculateSigleStepNeededVelocity    :: CelestialBody -> IState -> Place -> Angle -> [ScheduledBurn]
 calculateSigleStepNeededVelocity body state@(IState position v) targetPlace alpha
             = let
                 _OX = targetPlace
@@ -264,7 +268,7 @@ calculateSigleStepNeededVelocity body state@(IState position v) targetPlace alph
                 direction = Q.rotate (Q.axisAngle _hunit alpha) _OAunit
                 beta = calcSignedAngle _OA _OX direction
                 optV = univariateMin (-600) 600 (\speed -> norm (_OX - predictAtAnomaly body _OA _OX _harr beta direction speed))
-              in IState _OA (optV *^ direction)
+              in [ScheduledBurn 0 state (IState _OA (optV *^ direction))]
               where
                 predictAtAnomaly    :: CelestialBody -> Vector3 -> Vector3 -> Vector3 -> Angle -> Vector3 -> Double -> Place
                 predictAtAnomaly body _OA _OX _harr beta direction speed
@@ -282,3 +286,31 @@ calculateSigleStepNeededVelocity body state@(IState position v) targetPlace alph
 univariateMin      :: Double -> Double -> (Double -> Double) -> Double
 univariateMin min max f = let guide = C.easyOptimize f (min, max) 100 (mkStdGen 0) in C.pt guide
 
+calculateStopBurn :: CelestialBody -> Orbit -> Place -> ScheduledBurn
+calculateStopBurn body orbit direction
+                    = let
+                        IState periapsis velAtPeriapsis = fromOrbitAndTrueAnomalyToState body orbit 0.0
+                        targetTrueAnomaly = calcSignedAngle periapsis direction velAtPeriapsis
+                        --TODO convert anomaly to time
+                        stateAtTarget = fromOrbitAndTrueAnomalyToState body orbit targetTrueAnomaly
+                      in ScheduledBurn (-1) stateAtTarget (IState (position stateAtTarget) (makevect 0 0 0))
+
+type DeltaV = Double
+data ScheduledBurn = ScheduledBurn {startTime :: Time, startState :: IState, endState :: IState}
+
+endVelocity     :: ScheduledBurn -> Velocity
+endVelocity     = velocity . endState
+endPosition     = position . endState
+
+startVelocity   :: ScheduledBurn -> Velocity
+startVelocity   = velocity . startState
+
+calcDeltaV      :: ScheduledBurn -> DeltaV
+calcDeltaV burn = norm (startVelocity burn - endVelocity burn)
+
+calcTotalDeltaV :: [ScheduledBurn] -> DeltaV
+calcTotalDeltaV burns = sum (map calcDeltaV burns)
+
+calcEndOrbit    :: CelestialBody -> ScheduledBurn -> Orbit
+calcEndOrbit body burn
+                = fromStateToOrbit body (endState burn)

@@ -45,6 +45,8 @@ import Control.Monad.Trans.State
 
 import Physics.Orbit.Freefall
 
+import Debug.Trace
+
 class Drawable d where
     draw        :: d -> Picture
 
@@ -81,28 +83,44 @@ instance DrawableForce BouncingGround where
 
 instance Drawable Rocket where
     draw rocket@(Rocket craft@(RigidCraft parts coordinates ground) thrusters)
-            = pictures ([drawRelativeToCraft craft $ pictures (drawCenter craft:map draw parts)]
+            = --traceShow (startVelocity interceptStop) $
+                pictures ([drawRelativeToCraft craft $ pictures (drawCenter craft:map draw parts)]
                         ++ [drawVelocity craftPlace craftVel]
                         ++ map (color red . drawAction) (partsActions rocket (Tick 1.0 ))
                         ++ map (color green . drawLocalVelocities coordinates craftVel) parts
                         ++ [drawCraftDescription coordinates (inertiaTensor rocket)]
                         ++ [color (light blue) $ drawOrbit 300 coordinates ]
-                        ++ [color (light green) $ drawOrbitY 100 (IState (interceptPos + bodyCenter) interceptVel)]
-                        ++ [color (dark green) $ drawOrbitY (-100) (IState (progradeInterceptPos + bodyCenter) progradeInterceptVel)]
+                        ++ [color (light green) $ drawBurn 100 interceptBurn]
+                        ++ [color (light yellow) $ drawBurn (-100) interceptStop]
+                        ++ [color (dark green) $ drawBurn (-300) progradeInterceptBurn]
+                        ++ [color (dark yellow) $ drawBurn (-500) progradeInterceptStop]
                         )-- ++ map (color (dark green) . drawAction)) (thrustActions rocket (Tick 1.0 ))
               where (StateTriplet craftPlace craftVel) = stateFrom coordinates (StateTriplet origin atrest)
-                    IState interceptPos interceptVel = calculateSigleStepNeededVelocity body
-                                        (IState (craftPlace - bodyCenter) craftVel) (target - bodyCenter) (5)
-                    IState progradeInterceptPos progradeInterceptVel = calculateSigleStepProgradeBurn body
-                                        (IState (craftPlace - bodyCenter) craftVel) (target - bodyCenter)
+                    interceptBurn = head $ calculateSigleStepNeededVelocity body
+                                        (pvRelToBody craftPlace craftVel) (pRelToBody target) (5)
+                    interceptStop = calculateStopBurn body (calcEndOrbit body interceptBurn) (pRelToBody target)
+                    progradeInterceptBurn = head $ calculateSigleStepProgradeBurn body
+                                        (IState (craftPlace - bodyCenter) craftVel) (pRelToBody target)
+                    progradeInterceptStop = calculateStopBurn body (calcEndOrbit body progradeInterceptBurn) (pRelToBody target)
 
 --calculateSigleStepNeededVelocity    :: CelestialBody -> IState -> Place -> Angle -> IState
 
-target = (- makevect 400 0 200)
+-- TODO REMOVE
+pvRelToBody  :: Place -> Velocity -> IState
+pvRelToBody craftPlace = IState (craftPlace - bodyCenter)
+
+pRelToBody  :: Place -> Place
+pRelToBody x = x - bodyCenter
+
+target = - makevect 400 0 200
 
 bodyOffset = 1000000
 bodyCenter = makevect 0 0 (-bodyOffset)
 body = CelestialBody (5 * (bodyOffset ** 2))
+
+drawBurn           :: Float -> ScheduledBurn -> Picture
+drawBurn offset burn = pictures [drawOrbitY offset (IState (endPosition burn + bodyCenter) (endVelocity burn + makevect 0.0001 0 0)),
+                            translate (-offset-80) 200 $ scale textSize textSize $ appendLine ("dV = " ++ showFixed (calcDeltaV burn)) blank]
 
 drawOrbit           :: (EmbeddedFrameOfReference f) => Float -> f -> Picture
 drawOrbit offset system    = let
@@ -122,8 +140,6 @@ drawOrbitZ offset place vel = let
                         currPt = (+ bodyCenter) . position $ fromOrbitToState body orbit 0
                       in pictures [line (map ptPlaceCoord centeredPts),
                                  writeOrbitDescription offset orbit,
-                                 translate (-380) (200) $ scale textSize textSize
-                                 $ appendLine ("behind pt: (" ++ showFixed (xcoord (head centeredPts)) ++ ", " ++ showFixed (ycoord (head centeredPts)) ++ ", "  ++ showFixed (zcoord (head centeredPts)) ++ ") ") blank,
                                  color red $ drawCircle currPt 5]
 
 writeOrbitDescription :: Float -> Orbit -> Picture
