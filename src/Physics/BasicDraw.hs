@@ -13,7 +13,7 @@
 -----------------------------------------------------------------------------
 {-# LANGUAGE FlexibleContexts #-}
 module Physics.BasicDraw (
-    draw
+    drawOnScreen
 ) where
 
 import Linear.Matrix
@@ -40,22 +40,31 @@ import Graphics.Gloss.Data.Color
 import GHC.Float
 import Numeric
 
-import Control.Monad.Writer
+import Control.Monad.Writer.Lazy
 import Control.Monad.Trans.State
 
 import Physics.Orbit.Freefall
 
 import Debug.Trace
 
+
+textSize = 0.075
+
+drawOnScreen    :: SmallWorld -> Picture
+drawOnScreen w  = let (worldPicture, log) = runWriter (draw w)
+                    in pictures [worldPicture, printLog (-380) 400 textSize blue log]
+
 class Drawable d where
-    draw        :: d -> Picture
+    draw        :: d -> Writer ConsoleLog Picture
 
 instance Drawable SmallWorld where
     draw (SmallWorld currentTime crafts ground gravity controls)
-                = pictures (drawForce ground:map (color blue . draw) crafts
-                        ++ map (drawOrient . craftCoordinates) crafts
-                        ++ map (drawEnergy gravity) crafts
-                        ++ [drawCircle target 10])
+                = do
+                    craftsPicture <- mapM draw crafts
+                    mapM_ (drawEnergy gravity) crafts
+                    return (pictures (drawForce ground:craftsPicture
+                            ++ map (drawOrient . craftCoordinates) crafts
+                            ++ [drawCircle target 10]))
 
 drawOrient      :: (EmbeddedFrameOfReference f) => f -> Picture
 drawOrient coordinates
@@ -84,16 +93,29 @@ instance DrawableForce BouncingGround where
 instance Drawable Rocket where
     draw rocket@(Rocket craft@(RigidCraft parts coordinates ground) thrusters)
             = --traceShow (startVelocity interceptStop) $
-                pictures ([drawRelativeToCraft craft $ pictures (drawCenter craft:map draw parts)]
+                do
+                    tell ["", "Craft description:"]
+                    printCraftDescription coordinates (inertiaTensor rocket)
+                    tell ["", "Current rocket trajectory:"]
+                    rocketTrajectory <- drawOrbit 300 coordinates
+                    tell ["", "Intercept Burn Trajectory:"]
+                    interceptBurnTrajectory <- drawBurn 100 interceptBurn
+                    tell ["", "Intercept STOP Trajectory:"]
+                    interceptStopTrajectory <- drawBurn (-100) interceptStop
+                    tell ["", "Prograde Intercept Burn Trajectory:"]
+                    progradeInterceptBurnTrajectory <- drawBurn (-300) progradeInterceptBurn
+                    tell ["", "Prograde Intercept Stop Trajectory:"]
+                    progradeInterceptStopTrajectory <- drawBurn (-500) progradeInterceptStop
+                    partsPictures <- mapM draw parts
+                    return $ color blue $ pictures ([drawRelativeToCraft craft $ pictures (drawCenter craft:partsPictures)]
                         ++ [drawVelocity craftPlace craftVel]
                         ++ map (color red . drawAction) (partsActions rocket (Tick 1.0 ))
                         ++ map (color green . drawLocalVelocities coordinates craftVel) parts
-                        ++ [drawCraftDescription coordinates (inertiaTensor rocket)]
-                        ++ [color (light blue) $ drawOrbit 300 coordinates ]
-                        ++ [color (light green) $ drawBurn 100 interceptBurn]
-                        ++ [color (light yellow) $ drawBurn (-100) interceptStop]
-                        ++ [color (dark green) $ drawBurn (-300) progradeInterceptBurn]
-                        ++ [color (dark yellow) $ drawBurn (-500) progradeInterceptStop]
+                        ++ [color (light blue) rocketTrajectory ]
+                        ++ [color (light green) interceptBurnTrajectory]
+                        ++ [color (light yellow) interceptStopTrajectory]
+                        ++ [color (dark green) progradeInterceptBurnTrajectory]
+                        ++ [color (dark yellow) progradeInterceptStopTrajectory]
                         )-- ++ map (color (dark green) . drawAction)) (thrustActions rocket (Tick 1.0 ))
               where (StateTriplet craftPlace craftVel) = stateFrom coordinates (StateTriplet origin atrest)
                     interceptBurn = head $ calculateSigleStepNeededVelocity body
@@ -102,6 +124,8 @@ instance Drawable Rocket where
                     progradeInterceptBurn = head $ calculateSigleStepProgradeBurn body
                                         (IState (craftPlace - bodyCenter) craftVel) (pRelToBody target)
                     progradeInterceptStop = calculateStopBurn body (calcEndOrbit body progradeInterceptBurn) (pRelToBody target)
+
+
 
 --calculateSigleStepNeededVelocity    :: CelestialBody -> IState -> Place -> Angle -> IState
 
@@ -118,40 +142,45 @@ bodyOffset = 1000000
 bodyCenter = makevect 0 0 (-bodyOffset)
 body = CelestialBody (5 * (bodyOffset ** 2))
 
-drawBurn           :: Float -> ScheduledBurn -> Picture
-drawBurn offset burn = pictures [drawOrbitY offset (IState (endPosition burn + bodyCenter) (endVelocity burn + makevect 0.0001 0 0)),
-                            translate (-offset-80) 200 $ scale textSize textSize $ appendLine ("dV = " ++ showFixed (calcDeltaV burn)) blank]
+drawBurn           :: Float -> ScheduledBurn -> Writer ConsoleLog Picture
+drawBurn offset burn
+                    = do
+                        orbitPicture <- drawOrbitY offset (IState (endPosition burn + bodyCenter) (endVelocity burn + makevect 0.0001 0 0))
+                        tell ["dV = " ++ showFixed (calcDeltaV burn)]
+                        return orbitPicture
 
-drawOrbit           :: (EmbeddedFrameOfReference f) => Float -> f -> Picture
+
+drawOrbit           :: (EmbeddedFrameOfReference f) => Float -> f -> Writer ConsoleLog Picture
 drawOrbit offset system    = let
                         (StateTriplet place vel) = stateFrom system (StateTriplet origin atrest)
                       in drawOrbitZ offset place vel
 
-drawOrbitY          :: Float -> IState -> Picture
+drawOrbitY          :: Float -> IState -> Writer ConsoleLog Picture
 drawOrbitY offset (IState place vel)
                     = drawOrbitZ offset place vel
 
-drawOrbitZ          :: Float -> Place -> Velocity -> Picture
-drawOrbitZ offset place vel = let
+drawOrbitZ          :: Float -> Place -> Velocity -> Writer ConsoleLog Picture
+drawOrbitZ offset place vel =
+                    do
+                        printOrbitDescription offset orbit
+                        return $ pictures [line (map ptPlaceCoord centeredPts),
+                                 color red $ drawCircle currPt 5]
+                    where
                         orbit = fromStateToOrbit body (IState (place - bodyCenter) vel)
                         arguments = map (/ 1) [-20..20]
                         pts = map (fromOrbitToState body orbit) arguments
                         centeredPts = map ((+ bodyCenter) . position) pts
                         currPt = (+ bodyCenter) . position $ fromOrbitToState body orbit 0
-                      in pictures [line (map ptPlaceCoord centeredPts),
-                                 writeOrbitDescription offset orbit,
-                                 color red $ drawCircle currPt 5]
 
-writeOrbitDescription :: Float -> Orbit -> Picture
-writeOrbitDescription offset (Orbit (OrbitalParams _a _e _i _omega _Omega) _nu _M)
-                        =  translate (-offset-80) 300 $ scale textSize textSize
-                        $ appendLine ("_a = " ++ showFixed _a)
-                        $ appendLine ("_e = " ++ showFixedHighPrecision _e)
-                        $ appendLine ("_i = " ++ showFixedHighPrecision _i)
-                        $ appendLine ("_omega = " ++ showFixedHighPrecision _omega)
-                        $ appendLine ("_Omega = " ++ showFixedHighPrecision _Omega)
-                        $ appendLine ("_nu = " ++ showFixedHighPrecision _nu)
-                        $ appendLine ("_M = " ++ showFixedHighPrecision _M) blank
+printOrbitDescription :: Float -> Orbit -> Writer ConsoleLog ()
+printOrbitDescription offset (Orbit (OrbitalParams _a _e _i _omega _Omega) _nu _M)
+                        = tell ["_a = " ++ showFixed _a,
+                                "_e = " ++ showFixedHighPrecision _e,
+                                "_i = " ++ showFixedHighPrecision _i,
+                                "_omega = " ++ showFixedHighPrecision _omega,
+                                "_Omega = " ++ showFixedHighPrecision _Omega,
+                                "_nu = " ++ showFixedHighPrecision _nu,
+                                "_M = " ++ showFixedHighPrecision _M]
 
 drawLocalVelocities :: (EmbeddedFrameOfReference f) => f -> Velocity -> RigidPointObj -> Picture
 drawLocalVelocities system craftVel obj
@@ -174,8 +203,8 @@ ptCoord p = ptPlaceCoord (objPlace p)
 ptPlaceCoord place = (double2Float $ xcoord place, double2Float $ zcoord $ place)
 
 instance Drawable RigidPointObj where
-    draw obj        = let place = objPlace obj
-                      in pictures [line [(0,0), (double2Float (xcoord place), double2Float (zcoord place))], drawCircle place 3]
+    draw obj        = return $ pictures [line [(0,0), (double2Float (xcoord place), double2Float (zcoord place))], drawCircle place 3]
+                        where place = objPlace obj
 
 translateD          :: Double -> Double -> Picture -> Picture
 translateD x y      = translate (double2Float x) (double2Float y)
@@ -192,34 +221,42 @@ drawRectangle cx cy width height = translateD cx cy $ color (dark green) $ recta
 drawVector          :: Place -> Velocity -> Picture
 drawVector place vel = drawArrow (xcoord place) (zcoord place) (xcoord vel) (zcoord vel)
 
-textSize = 0.075
 
-drawCraftDescription :: RotatingCoordinates -> InertiaTensor -> Picture
-drawCraftDescription (RotatingCoordinates _ (InertialCoordinates location velocity orientation) angularVelocity) mom
-                     = translate (-380) (100) $ scale textSize textSize
-                        $ appendLine ("coordinates: (" ++ showFixed (xcoord location) ++ ", " ++ showFixed (zcoord location) ++ ") ")
-                        $ appendLine ("velocity: (" ++ showFixed (xcoord velocity) ++ ", " ++ showFixed (zcoord velocity) ++ ")")
-                        $ appendLine ("3D coordinates: (" ++ showFixed (xcoord location) ++ ", " ++ showFixed (ycoord location) ++ ", " ++ showFixed (zcoord location) ++")")
-                        $ appendLine ("3D velocity: (" ++ showFixed (xcoord velocity) ++ ", " ++ showFixed (ycoord velocity) ++ ", " ++ showFixed (zcoord velocity) ++")")
-                        $ appendLine ("3D angularVelocity: (" ++ showFixed (xcoord angularVelocity) ++ ", " ++ showFixed (ycoord angularVelocity) ++ ", " ++ showFixed (zcoord angularVelocity) ++")")
-                        $ appendLine ("mominertia: " ++ showFixed (det33 mom))
-                        $ blank
+printCraftDescription :: RotatingCoordinates -> InertiaTensor -> Writer ConsoleLog ()
+printCraftDescription (RotatingCoordinates _ (InertialCoordinates location velocity orientation) angularVelocity) mom
+                     = do
+                        tell ["coordinates: (" ++ showFixed (xcoord location) ++ ", " ++ showFixed (zcoord location) ++ ") "]
+                        tell ["velocity: (" ++ showFixed (xcoord velocity) ++ ", " ++ showFixed (zcoord velocity) ++ ")"]
+                        tell ["3D coordinates: (" ++ showFixed (xcoord location) ++ ", " ++ showFixed (ycoord location) ++ ", " ++ showFixed (zcoord location) ++")"]
+                        tell ["3D velocity: (" ++ showFixed (xcoord velocity) ++ ", " ++ showFixed (ycoord velocity) ++ ", " ++ showFixed (zcoord velocity) ++")"]
+                        tell ["3D angularVelocity: (" ++ showFixed (xcoord angularVelocity) ++ ", " ++ showFixed (ycoord angularVelocity) ++ ", " ++ showFixed (zcoord angularVelocity) ++")"]
+                        tell ["mominertia: " ++ showFixed (det33 mom)]
 
-drawEnergy           :: Gravity -> Rocket -> Picture
+drawEnergy           :: Gravity -> Rocket -> Writer ConsoleLog ()
 drawEnergy gravity rocket
-                    = translate (-380) (-100) $ scale textSize textSize
-                        $ appendLine ("potential energy: " ++ showFixed potential)
-                        $ appendLine ("kinetic energy: " ++ showFixed kinetic)
-                        $ appendLine ("potential energy: " ++ showFixed (potential + kinetic)) blank
-                    where potential = calcPotential gravity rocket
-                          kinetic = calcKinetic rocket
+                    = do
+                        tell ["potential energy: " ++ showFixed potential]
+                        tell ["kinetic energy: " ++ showFixed kinetic]
+                        tell ["potential energy: " ++ showFixed (potential + kinetic)]
+                      where
+                        potential = calcPotential gravity rocket
+                        kinetic = calcKinetic rocket
 
 showFixed f = showFFloat (Just 2) f ""
 showFixedHighPrecision f = showFFloat (Just 10) f ""
 
 
-appendLine        :: String -> Picture -> Picture
-appendLine txt picture = pictures [translate 0 (-150) picture, text txt]
+--appendLine        :: String -> Picture -> Picture
+--appendLine txt picture = pictures [translate 0 (-150) picture, text txt]
 
 
+type ConsoleLog = [String]
 
+printLog    :: Float -> Float -> Float -> Color -> ConsoleLog -> Picture
+printLog xoff yoff textSize textColor lines
+            = color textColor $ translate xoff yoff $ scale textSize textSize
+                $ pictures (printall 0 lines)
+
+printall        :: Float -> ConsoleLog -> [Picture]
+printall offset [] = []
+printall offset (line:lines) = translate 0 (-offset) (text line) : printall (offset + 150) lines

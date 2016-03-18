@@ -100,7 +100,7 @@ findBetterControl world = world {craftControl = findBestControls 1 criterion wor
 
 criterion   = Criterion (makevect (200) 0 (-0)) atrest (CriterionW 1 0)
 
-window = InWindow "My Window" (800, 800) (0, 0)
+window = InWindow "My Window" (1000, 900) (0, 0)
 fps = 60
 
 update      :: (World w) => ViewPort -> Float -> w -> w
@@ -114,5 +114,5 @@ controlledUpdate ups vp t world@(SmallWorld time _ _ _ _)
 
 runBasicDemo    :: IO()
 runBasicDemo    = do
-                    simulate window white fps (createScene) draw (controlledUpdate 0.02)
+                    simulate window white fps (createScene) drawOnScreen (controlledUpdate 0.02)
 
