@@ -252,6 +252,9 @@ normalizeAngle f = f - 2 * pi * floor' (f / (2 * pi))
 --                            _h = cross _OA _OX  -- normal of intercept trajectory (specific angular momentum)
 --
 
+projectOnto         :: Vector3 -> Vector3 -> Vector3
+projectOnto n vec   = vec - (dot n vec / quadrance n) *^ n
+
 calculateSigleStepProgradeBurn    :: CelestialBody -> IState -> Place -> [ScheduledBurn]
 calculateSigleStepProgradeBurn  body state@(IState position v) targetPlace
             = calculateSigleStepNeededVelocity body state targetPlace (calcSignedAngle position v v)
@@ -263,11 +266,12 @@ calculateSigleStepNeededVelocity body state@(IState position v) targetPlace alph
                 _OA = position
                 --deltaTrueAnomaly = acos (dot _OA _OX / (norm _OA * norm _OX))
                 _OAunit = _OA ^/ norm _OA
-                _harr = cross _OA _OX  -- needed normal of intercept trajectory (specific angular momentum)
+                vproj = projectOnto (cross _OA _OX) v
+                _harr = cross _OA vproj  -- needed normal of intercept trajectory (specific angular momentum)
                 _hunit = _harr ^/ norm _harr
                 direction = Q.rotate (Q.axisAngle _hunit alpha) _OAunit
                 beta = calcSignedAngle _OA _OX direction
-                optV = univariateMin (-600) 600 (\speed -> norm (_OX - predictAtAnomaly body _OA _OX _harr beta direction speed))
+                optV = traceShow beta $ univariateMin (-600) 600 (\speed -> norm (_OX - predictAtAnomaly body _OA _OX _harr beta direction speed))
               in [ScheduledBurn 0 state (IState _OA (optV *^ direction))]
               where
                 predictAtAnomaly    :: CelestialBody -> Vector3 -> Vector3 -> Vector3 -> Angle -> Vector3 -> Double -> Place
