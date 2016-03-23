@@ -98,10 +98,10 @@ instance Drawable Rocket where
                     printCraftDescription coordinates (inertiaTensor rocket)
                     tell ["", "Current rocket trajectory:"]
                     rocketTrajectory <- drawOrbit 300 coordinates
-                    tell ["", "Intercept Burn Trajectory:"]
-                    interceptBurnTrajectory <- drawBurn 100 interceptBurn
-                    tell ["", "Intercept STOP Trajectory:"]
-                    interceptStopTrajectory <- drawBurn (-100) interceptStop
+--                    tell ["", "Intercept Burn Trajectory:"]
+--                    interceptBurnTrajectory <- drawBurn 100 interceptBurn
+--                    tell ["", "Intercept STOP Trajectory:"]
+--                    interceptStopTrajectory <- drawBurn (-100) interceptStop
                     tell ["", "Prograde Intercept Burn Trajectory:"]
                     progradeInterceptBurnTrajectory <- drawBurn (-300) progradeInterceptBurn
                     tell ["", "Prograde Intercept Stop Trajectory:"]
@@ -112,8 +112,8 @@ instance Drawable Rocket where
                         ++ map (color red . drawAction) (partsActions rocket (Tick 1.0 ))
                         ++ map (color green . drawLocalVelocities coordinates craftVel) parts
                         ++ [color (light blue) rocketTrajectory ]
-                        ++ [color (light green) interceptBurnTrajectory]
-                        ++ [color (light yellow) interceptStopTrajectory]
+--                        ++ [color (light green) interceptBurnTrajectory]
+--                        ++ [color (light yellow) interceptStopTrajectory]
                         ++ [color (dark green) progradeInterceptBurnTrajectory]
                         ++ [color (dark yellow) progradeInterceptStopTrajectory]
                         )-- ++ map (color (dark green) . drawAction)) (thrustActions rocket (Tick 1.0 ))
