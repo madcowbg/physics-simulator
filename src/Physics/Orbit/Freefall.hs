@@ -59,7 +59,9 @@ data OrbitalParams = OrbitalParams {_a      :: Distance, -- semiMajorAxis
 
 data Orbit = Orbit {params :: OrbitalParams,
                     _nu     :: Angle, -- true anomaly
-                    _M      :: Angle}   --mean anomaly
+                    _M      :: Angle, --mean anomaly
+                    periapsisEpoch :: Time,
+                    body    :: CelestialBody}
 
 trueAnomaly     = _nu
 meanAnomaly     = _M
@@ -78,20 +80,22 @@ data CelestialBody = CelestialBody {mass :: Double} --WTF?
 -- polar vector
 _Khat              = makevect 0 0 1
 
-fromStateToOrbitalParams    :: CelestialBody -> IState -> OrbitalParams
-fromStateToOrbitalParams body state = params (fromStateToOrbit body state)
+fromStateToOrbitalParams    :: CelestialBody -> IState -> Time -> OrbitalParams
+fromStateToOrbitalParams body state epoch = params (fromStateToOrbit body state epoch)
 
-fromStateToOrbit :: CelestialBody -> IState -> Orbit
-fromStateToOrbit body state@(IState r v)
+fromStateToOrbit :: CelestialBody -> IState -> Time -> Orbit
+fromStateToOrbit body state@(IState r v) epoch
                     = Orbit {
                             params = OrbitalParams {
-                                _a     = - _mu / (2 * _E),                         -- semi-major axis
-                                _e     = __e,                                      -- eccentricity
-                                _i     = acos (_harr ^. _z / norm _harr),          -- inclination
-                                _omega = calcArgumentOfPeriapsis _earr _z _nhat,   -- argument of periapsis
-                                _Omega = acos (_nhat ^._x / _n)},                  -- longitude of ascending node
+                                _a     = __a,                                   -- semi-major axis
+                                _e     = __e,                                   -- eccentricity
+                                _i     = acos (_harr ^. _z / norm _harr),       -- inclination
+                                _omega = calcArgumentOfPeriapsis _earr _z _nhat,-- argument of periapsis
+                                _Omega = acos (_nhat ^._x / _n)},               -- longitude of ascending node
                             _nu     = _nu,                                      -- true anomaly
-                            _M      = __M}                                      -- mean anomaly
+                            _M      = __M,                                      -- mean anomaly
+                            periapsisEpoch = epoch - (_P / __M),                -- epoch of last periapsis
+                            body = body}
                       where
                             _r      = norm r
                             -- standard gravitational parameter
@@ -110,6 +114,15 @@ fromStateToOrbit body state@(IState r v)
                             _nu     = calcTrueAnomaly _earr state
                             -- mean anomaly
                             __M     = trueToMeanAnomaly __e _nu
+                            __a     = - _mu / (2 * _E)
+                            -- orbit period
+                            _P      = orbitalPeriodFromParams __a _mu
+
+orbitalPeriodFromParams :: Distance -> Double -> Double
+orbitalPeriodFromParams _a _mu      = 2 * pi * sqrt ((_a ** 3) / _mu)
+
+orbitalPeriod       :: Orbit -> Double
+orbitalPeriod orbit = orbitalPeriodFromParams (_a $ params orbit) (_mubody $ body orbit)
 
 eccentricityVector  :: Place -> Velocity -> Vector3 -> Double -> Vector3
 eccentricityVector r v _harr _mu
@@ -158,17 +171,17 @@ newton epsilon iter f f' guess
             where newGuess = guess - (f guess / f' guess)
                   err =  abs (newGuess - guess)
 
-fromOrbitToState    :: CelestialBody -> Orbit -> Time -> IState
-fromOrbitToState body orbit@(Orbit orbitalParams _nu _M_0) deltaT
-                    = fromOrbitAndTrueAnomalyToState body orbit _nu
+fromOrbitToState    :: Orbit -> Time -> IState
+fromOrbitToState orbit@(Orbit orbitalParams _nu _M_0 periapsisEpoch body) deltaT
+                    = fromOrbitAndTrueAnomalyToState orbit _nu
                       where _mu     = _mubody body
                             _M_t    = normalizeAngle (_M_0 + deltaT * sqrt (_mu / (_a orbitalParams ** 3)))
                             _E = meanToEllipticalAnomaly orbitalParams _M_t
                             -- true anomaly
                             _nu = ellipticalToTrueAnomaly orbitalParams _E
 
-fromOrbitAndTrueAnomalyToState  :: CelestialBody -> Orbit -> Angle -> IState
-fromOrbitAndTrueAnomalyToState body orbit@(Orbit orbitalParams _nu_0 _M_0) _nu
+fromOrbitAndTrueAnomalyToState  :: Orbit -> Angle -> IState
+fromOrbitAndTrueAnomalyToState orbit@(Orbit orbitalParams _nu_0 _M_0 _ body) _nu
                     = rotateToBodyInertial orbitalParams (IState r_o v_o) -- transform to inertial frame
                       where
                             _mu     = _mubody body
@@ -202,9 +215,13 @@ rotateToBodyInertial orbitalParams (IState r_o v_o)
                                 _R_omega = Q.axisAngle (makevect 0.0 0 1) ( _omega orbitalParams)
                                 fullTransform = _R_Omega * _R_i * _R_omega
 
+
 -- | Normalize an angle to be between 0 and 2*pi radians
 normalizeAngle :: Double -> Double
-normalizeAngle f = f - 2 * pi * floor' (f / (2 * pi))
+normalizeAngle = normalizePeriod (2 * pi)
+
+normalizePeriod:: Double -> Double -> Double
+normalizePeriod period f = f - period * floor' (f / period)
  where  floor' :: Double -> Double
         floor' x = fromIntegral (floor x :: Int)
 {-# INLINE normalizeAngle #-}
@@ -255,12 +272,12 @@ normalizeAngle f = f - 2 * pi * floor' (f / (2 * pi))
 projectOnto         :: Vector3 -> Vector3 -> Vector3
 projectOnto n vec   = vec - (dot n vec / quadrance n) *^ n
 
-calculateSigleStepProgradeBurn    :: CelestialBody -> IState -> Place -> [ScheduledBurn]
-calculateSigleStepProgradeBurn  body state@(IState position v) targetPlace
-            = calculateSigleStepNeededVelocity body state targetPlace (calcSignedAngle position v v)
+calculateSigleStepProgradeBurn    :: CelestialBody -> IState -> Double -> Place -> [ScheduledBurn]
+calculateSigleStepProgradeBurn  body state@(IState position v) burnStart targetPlace
+            = calculateSigleStepNeededVelocity body state targetPlace (calcSignedAngle position v v) burnStart
 
-calculateSigleStepNeededVelocity    :: CelestialBody -> IState -> Place -> Angle -> [ScheduledBurn]
-calculateSigleStepNeededVelocity body state@(IState position v) targetPlace alpha
+calculateSigleStepNeededVelocity    :: CelestialBody -> IState -> Place -> Angle -> Double -> [ScheduledBurn]
+calculateSigleStepNeededVelocity body state@(IState position v) targetPlace alpha burnStart
             = let
                 _OX = targetPlace
                 _OA = position
@@ -271,36 +288,42 @@ calculateSigleStepNeededVelocity body state@(IState position v) targetPlace alph
                 _hunit = _harr ^/ norm _harr
                 direction = Q.rotate (Q.axisAngle _hunit alpha) _OAunit
                 beta = calcSignedAngle _OA _OX direction
-                optV = traceShow beta $ univariateMin (-600) 600 (\speed -> norm (_OX - predictAtAnomaly body _OA _OX _harr beta direction speed))
+                optV = univariateMin (-600) 600 (\speed -> norm (_OX - predictAtAnomaly body _OA _OX _harr beta direction speed))
               in [ScheduledBurn 0 state (IState _OA (optV *^ direction))]
               where
                 predictAtAnomaly    :: CelestialBody -> Vector3 -> Vector3 -> Vector3 -> Angle -> Vector3 -> Double -> Place
                 predictAtAnomaly body _OA _OX _harr beta direction speed
                                     = let
                                         _AB = speed *^ direction  -- predicted velocity
-                                        interceptOrbit = fromStateToOrbit body (IState _OA _AB)
+                                        interceptOrbit = fromStateToOrbit body (IState _OA _AB) burnStart
                                         _mu     = _mubody body
                                         _earr = eccentricityVector _OA _AB _harr _mu
                                         -- ASSERT calcSignedAngle _earr _OA == _nu interceptOrbit
                                         _nu_t = beta + _nu interceptOrbit -- with proper handedness! (direction of rotation)
-                                        IState ipos ivel = fromOrbitAndTrueAnomalyToState body interceptOrbit _nu_t
+                                        IState ipos ivel = fromOrbitAndTrueAnomalyToState interceptOrbit _nu_t
                                       in ipos
 --                                      traceShow (calcSignedAngle _earr _OA _AB - _nu interceptOrbit) $
 
 univariateMin      :: Double -> Double -> (Double -> Double) -> Double
 univariateMin min max f = let guide = C.easyOptimize f (min, max) 100 (mkStdGen 0) in C.pt guide
 
-calculateStopBurn :: CelestialBody -> Orbit -> Place -> ScheduledBurn
-calculateStopBurn body orbit direction
+
+trueAnomalyToEpoch  :: Orbit -> Angle -> Time
+trueAnomalyToEpoch orbit trueAnomaly
+                    = let meanAnomalyAtBurn = trueToMeanAnomaly (_e $ params orbit) trueAnomaly
+                      in meanAnomalyAtBurn * orbitalPeriod orbit
+
+
+calculateStopBurn :: Orbit -> Place -> ScheduledBurn
+calculateStopBurn orbit direction
                     = let
-                        IState periapsis velAtPeriapsis = fromOrbitAndTrueAnomalyToState body orbit 0.0
+                        IState periapsis velAtPeriapsis = fromOrbitAndTrueAnomalyToState orbit 0.0
                         targetTrueAnomaly = calcSignedAngle periapsis direction velAtPeriapsis
-                        --TODO convert anomaly to time
-                        stateAtTarget = fromOrbitAndTrueAnomalyToState body orbit targetTrueAnomaly
-                      in ScheduledBurn (-1) stateAtTarget (IState (position stateAtTarget) (makevect 0 0 0))
+                        stateAtTarget = fromOrbitAndTrueAnomalyToState orbit targetTrueAnomaly
+                      in ScheduledBurn (trueAnomalyToEpoch orbit targetTrueAnomaly) stateAtTarget (IState (position stateAtTarget) (makevect 0 0 0))
 
 type DeltaV = Double
-data ScheduledBurn = ScheduledBurn {startTime :: Time, startState :: IState, endState :: IState}
+data ScheduledBurn = ScheduledBurn {scheduledTime :: Time, startState :: IState, endState :: IState}
 
 endVelocity     :: ScheduledBurn -> Velocity
 endVelocity     = velocity . endState
@@ -309,12 +332,26 @@ endPosition     = position . endState
 startVelocity   :: ScheduledBurn -> Velocity
 startVelocity   = velocity . startState
 
+velocityChange      :: ScheduledBurn -> Velocity
+velocityChange burn = startVelocity burn - endVelocity burn
+
 calcDeltaV      :: ScheduledBurn -> DeltaV
-calcDeltaV burn = norm (startVelocity burn - endVelocity burn)
+calcDeltaV      = norm . velocityChange
 
 calcTotalDeltaV :: [ScheduledBurn] -> DeltaV
 calcTotalDeltaV burns = sum (map calcDeltaV burns)
 
 calcEndOrbit    :: CelestialBody -> ScheduledBurn -> Orbit
 calcEndOrbit body burn
-                = fromStateToOrbit body (endState burn)
+                = fromStateToOrbit body (endState burn) (scheduledTime burn)
+
+
+data ExecuteBurn = ExecuteBurn {startTime :: Time, endTime :: Time, acceleration :: Acceleration}
+
+prepareBurn     :: Orbit -> ScheduledBurn -> Double -> ExecuteBurn
+prepareBurn orbit burn maxAccel
+                = let
+                    timeToBurn = normalizePeriod (orbitalPeriod orbit) $ trueAnomalyToEpoch orbit (scheduledTime burn)
+                    burnTime = calcDeltaV burn / maxAccel
+                    acceleration = velocityChange burn ^/ burnTime
+                   in ExecuteBurn (timeToBurn - burnTime / 2) (timeToBurn + burnTime / 2) acceleration

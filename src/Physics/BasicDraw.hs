@@ -119,11 +119,11 @@ instance Drawable Rocket where
                         )-- ++ map (color (dark green) . drawAction)) (thrustActions rocket (Tick 1.0 ))
               where (StateTriplet craftPlace craftVel) = stateFrom coordinates (StateTriplet origin atrest)
                     interceptBurn = head $ calculateSigleStepNeededVelocity body
-                                        (pvRelToBody craftPlace craftVel) (pRelToBody target) (5)
-                    interceptStop = calculateStopBurn body (calcEndOrbit body interceptBurn) (pRelToBody target)
+                                        (pvRelToBody craftPlace craftVel) (pRelToBody target) (5) 0
+                    interceptStop = calculateStopBurn (calcEndOrbit body interceptBurn) (pRelToBody target)
                     progradeInterceptBurn = head $ calculateSigleStepProgradeBurn body
-                                        (IState (craftPlace - bodyCenter) craftVel) (pRelToBody target)
-                    progradeInterceptStop = calculateStopBurn body (calcEndOrbit body progradeInterceptBurn) (pRelToBody target)
+                                        (IState (craftPlace - bodyCenter) craftVel) 0 (pRelToBody target)
+                    progradeInterceptStop = calculateStopBurn (calcEndOrbit body progradeInterceptBurn) (pRelToBody target)
 
 
 
@@ -166,21 +166,22 @@ drawOrbitZ offset place vel =
                         return $ pictures [line (map ptPlaceCoord centeredPts),
                                  color red $ drawCircle currPt 5]
                     where
-                        orbit = fromStateToOrbit body (IState (place - bodyCenter) vel)
+                        orbit = fromStateToOrbit body (IState (place - bodyCenter) vel) 0
                         arguments = map (/ 1) [-20..20]
-                        pts = map (fromOrbitToState body orbit) arguments
+                        pts = map (fromOrbitToState orbit) arguments
                         centeredPts = map ((+ bodyCenter) . position) pts
-                        currPt = (+ bodyCenter) . position $ fromOrbitToState body orbit 0
+                        currPt = (+ bodyCenter) . position $ fromOrbitToState orbit 0
 
 printOrbitDescription :: Float -> Orbit -> Writer ConsoleLog ()
-printOrbitDescription offset (Orbit (OrbitalParams _a _e _i _omega _Omega) _nu _M)
+printOrbitDescription offset (Orbit (OrbitalParams _a _e _i _omega _Omega) _nu _M epochAtPeriapsis body)
                         = tell ["_a = " ++ showFixed _a,
                                 "_e = " ++ showFixedHighPrecision _e,
                                 "_i = " ++ showFixedHighPrecision _i,
                                 "_omega = " ++ showFixedHighPrecision _omega,
                                 "_Omega = " ++ showFixedHighPrecision _Omega,
                                 "_nu = " ++ showFixedHighPrecision _nu,
-                                "_M = " ++ showFixedHighPrecision _M]
+                                "_M = " ++ showFixedHighPrecision _M,
+                                "_epoch = " ++ showFixedHighPrecision epochAtPeriapsis]
 
 drawLocalVelocities :: (EmbeddedFrameOfReference f) => f -> Velocity -> RigidPointObj -> Picture
 drawLocalVelocities system craftVel obj

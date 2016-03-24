@@ -40,6 +40,8 @@ module Physics.Primitives (
     asAcceleration,
     asAngularAcceleration,
     calcTorque,
+    --
+    interpolateRotation,
 ) where
 
 import Physics.Elementary
@@ -112,3 +114,6 @@ asAngularAcceleration torque inertiaTensor
 
 calcTorque         :: ForceAmount -> Place -> AngularAcceleration
 calcTorque          = cross
+
+interpolateRotation :: AngularVelocity -> AngularVelocity -> Double -> AngularVelocity
+interpolateRotation b e t = b ^* (1-t) + e ^* t
