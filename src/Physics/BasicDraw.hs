@@ -120,10 +120,10 @@ instance Drawable Rocket where
               where (StateTriplet craftPlace craftVel) = stateFrom coordinates (StateTriplet origin atrest)
                     interceptBurn = head $ calculateSigleStepNeededVelocity body
                                         (pvRelToBody craftPlace craftVel) (pRelToBody target) (5) 0
-                    interceptStop = calculateStopBurn (calcEndOrbit body interceptBurn) (pRelToBody target)
+                    interceptStop = calculateStopBurn (params $ calcEndOrbit body interceptBurn) (pRelToBody target)
                     progradeInterceptBurn = head $ calculateSigleStepProgradeBurn body
                                         (IState (craftPlace - bodyCenter) craftVel) 0 (pRelToBody target)
-                    progradeInterceptStop = calculateStopBurn (calcEndOrbit body progradeInterceptBurn) (pRelToBody target)
+                    progradeInterceptStop = calculateStopBurn (params $ calcEndOrbit body progradeInterceptBurn) (pRelToBody target)
 
 
 
@@ -173,7 +173,7 @@ drawOrbitZ offset place vel =
                         currPt = (+ bodyCenter) . position $ fromOrbitToState orbit 0
 
 printOrbitDescription :: Float -> Orbit -> Writer ConsoleLog ()
-printOrbitDescription offset (Orbit (OrbitalParams _a _e _i _omega _Omega) _nu _M epochAtPeriapsis body)
+printOrbitDescription offset (Orbit (OrbitalParams _a _e _i _omega _Omega body) _nu _M epochAtPeriapsis)
                         = tell ["_a = " ++ showFixed _a,
                                 "_e = " ++ showFixedHighPrecision _e,
                                 "_i = " ++ showFixedHighPrecision _i,
