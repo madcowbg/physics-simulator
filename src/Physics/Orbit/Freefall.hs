@@ -28,7 +28,11 @@ module Physics.Orbit.Freefall (
     calcEndOrbit, calcTotalDeltaV, calcDeltaV,
     calculateStopBurn,
     --- remove
-    params
+    params,
+    --- flight planning
+    ExecuteBurn (ExecuteBurn),
+    FlightPlan (FlightPlan),
+
 ) where
 
 import qualified Linear.Quaternion as Q -- TODO move to primitives
@@ -173,11 +177,23 @@ newton epsilon iter f f' guess
             where newGuess = guess - (f guess / f' guess)
                   err =  abs (newGuess - guess)
 
+epochToMeanAnomaly   :: Orbit -> Time -> Angle
+epochToMeanAnomaly orbit time = deltaTimeFromMeanAnomalyToMeanAnomaly (params orbit) 0 (time - periapsisEpoch orbit)
+
+deltaTimeToMeanAnomaly   :: Orbit -> Time -> Angle
+deltaTimeToMeanAnomaly orbit = deltaTimeFromMeanAnomalyToMeanAnomaly (params orbit) (_M orbit)
+
+deltaTimeFromMeanAnomalyToMeanAnomaly   :: OrbitalParams -> Angle -> Time -> Angle
+deltaTimeFromMeanAnomalyToMeanAnomaly orbitalParams _M_0 deltaT
+                    = normalizeAngle $ _M_0 + deltaT * sqrt (_mu / (_a orbitalParams ** 3))
+                        where
+                            _mu     = _mubody (body orbitalParams)
+
 fromOrbitToState    :: Orbit -> Time -> IState
 fromOrbitToState orbit@(Orbit orbitalParams _nu _M_0 periapsisEpoch) deltaT
                     = fromOrbitAndTrueAnomalyToState (params orbit) _nu
-                      where _mu     = _mubody (body orbitalParams)
-                            _M_t    = normalizeAngle (_M_0 + deltaT * sqrt (_mu / (_a orbitalParams ** 3)))
+                      where
+                            _M_t = deltaTimeToMeanAnomaly orbit deltaT
                             _E = meanToEllipticalAnomaly orbitalParams _M_t
                             -- true anomaly
                             _nu = ellipticalToTrueAnomaly orbitalParams _E
@@ -348,7 +364,7 @@ calcEndOrbit body burn
                 = fromStateToOrbit body (endState burn) (scheduledTime burn)
 
 
-data ExecuteBurn = ExecuteBurn {startTime :: Time, endTime :: Time, acceleration :: Acceleration}
+data ExecuteBurn= ExecuteBurn {startTime :: Time, endTime :: Time, acceleration :: Acceleration}
 data FlightPlan = FlightPlan {current :: Orbit, burns :: [ExecuteBurn]}
 
 prepareBurn     :: OrbitalParams -> ScheduledBurn -> Double -> ExecuteBurn
@@ -358,3 +374,34 @@ prepareBurn orbit burn maxAccel
                     burnTime = calcDeltaV burn / maxAccel
                     acceleration = velocityChange burn ^/ burnTime
                    in ExecuteBurn (timeToBurn - burnTime / 2) (timeToBurn + burnTime / 2) acceleration
+
+midTime    :: ExecuteBurn -> Double
+midTime burn = (startTime burn + endTime burn) / 2
+
+burnTime   :: ExecuteBurn -> Double
+burnTime burn = endTime burn - startTime burn
+
+totalVelocityChange    :: ExecuteBurn -> Velocity
+totalVelocityChange burn = burnTime burn *^ acceleration burn
+
+coast           :: Orbit -> Time -> Orbit
+coast orbit time     = orbit {_M = _M_t, _nu = _nu_t}
+                  where
+                    _M_t = epochToMeanAnomaly orbit time
+                    _nu_t = meanToTrueAnomaly (params orbit) _M_t
+
+evolveToTime     :: FlightPlan -> Time -> FlightPlan
+evolveToTime plan@(FlightPlan current burns) time
+                | null burns || startTime (head burns) > time
+                                =  plan {current = coast current time}
+                | otherwise     = evolveToTime (plan {current = orbitAfterFirstBurn, burns = tail burns}) time
+                                where
+                                    currentBurn = (head burns)
+                                    orbitAtBurn = coast current (midTime currentBurn)
+                                    IState burnPlace velocity = fromOrbitToState orbitAtBurn 0
+                                    newState = IState burnPlace (velocity + totalVelocityChange currentBurn)
+                                    orbitAfterFirstBurn = fromStateToOrbit (body (params current)) newState 0
+
+
+--flightStates    :: FlightPlan -> [Time] -> [IState]
+--
