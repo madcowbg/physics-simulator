@@ -173,14 +173,14 @@ drawOrbitZ offset place vel =
                         currPt = (+ bodyCenter) . position $ fromOrbitToState orbit 0
 
 printOrbitDescription :: Float -> Orbit -> Writer ConsoleLog ()
-printOrbitDescription offset (Orbit (OrbitalParams _a _e _i _omega _Omega body) _nu _M epochAtPeriapsis)
+printOrbitDescription offset (Orbit (OrbitalParams _a _e _i _omega _Omega body) anomaly epochAtPeriapsis)
                         = tell ["_a = " ++ showFixed _a,
                                 "_e = " ++ showFixedHighPrecision _e,
                                 "_i = " ++ showFixedHighPrecision _i,
                                 "_omega = " ++ showFixedHighPrecision _omega,
                                 "_Omega = " ++ showFixedHighPrecision _Omega,
-                                "_nu = " ++ showFixedHighPrecision _nu,
-                                "_M = " ++ showFixedHighPrecision _M,
+                                "_nu = " ++ showFixedHighPrecision (angleTrue anomaly),
+                                "_M = " ++ showFixedHighPrecision (angleMean anomaly),
                                 "_epoch = " ++ showFixedHighPrecision epochAtPeriapsis]
 
 drawLocalVelocities :: (EmbeddedFrameOfReference f) => f -> Velocity -> RigidPointObj -> Picture

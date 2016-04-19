@@ -20,7 +20,6 @@ module Physics.Orbit.Freefall (
     fromStateToOrbit,
     fromOrbitToState,
     -- ?
-    trueAnomaly, meanAnomaly,
     calculateSigleStepNeededVelocity,
     calculateSigleStepProgradeBurn,
     --- move
@@ -32,6 +31,10 @@ module Physics.Orbit.Freefall (
     --- flight planning
     ExecuteBurn (ExecuteBurn),
     FlightPlan (FlightPlan),
+    --
+    Anomaly, angleTrue, angleMean, angleEccentric,
+    fromTrue, fromMean, fromEpoch,
+    addTrue, addMean, addTime,
 
 ) where
 
@@ -64,13 +67,69 @@ data OrbitalParams = OrbitalParams {_a      :: Distance, -- semiMajorAxis
                     _Omega  :: Angle, -- longitude of ascending node
                     body    :: CelestialBody}
 
+----------------------
+data Anomaly = Anomaly {orbitalParams :: OrbitalParams, angleTrue, angleMean , angleEccentric :: Angle}
+
+createAnomaly :: (Angle->Angle) -> (Angle->Angle) -> (Angle->Angle) -> OrbitalParams -> Angle -> Anomaly
+createAnomaly f g h params value
+                | value < 0 || value >= 2*pi   =createAnomaly f h g params (normalizeAngle value)
+                | otherwise                    = Anomaly params (f value) (g value) (h value)
+
+trueToEccentricAnomaly
+                    :: OrbitalParams -> Double -> Double
+trueToEccentricAnomaly orbit _nu
+                    = 2 * atan (tan (_nu / 2) / sqrt ((1 + _e orbit)/(1-_e orbit)))
+
+eccentricToMeanAnomaly       :: OrbitalParams -> Double -> Double
+eccentricToMeanAnomaly orbit __E = __E - _e orbit * sin __E
+
+trueToMeanAnomaly   :: OrbitalParams -> Double -> Double
+trueToMeanAnomaly orbit =  eccentricToMeanAnomaly orbit . trueToEccentricAnomaly orbit
+
+meanToEccentricAnomaly :: OrbitalParams -> Angle -> Angle
+meanToEccentricAnomaly orbitalParams _M_t = newton 1e-4 maxIter f_E f_E' _M_t                -- numerical solve for eccentric anomaly
+                                where
+                                    f_E _E  = _E - _e orbitalParams * sin _E - _M_t
+                                    f_E' _E = 1 - _e orbitalParams * cos _E
+
+eccentricToTrueAnomaly     :: OrbitalParams -> Angle -> Angle
+eccentricToTrueAnomaly orbitalParams _E
+            = 2 * atan2 (sqrt (1+_e orbitalParams) * sin (_E/2)) (sqrt (1-_e orbitalParams) * cos (_E/2))
+
+meanToTrueAnomaly       :: OrbitalParams -> Angle -> Angle
+meanToTrueAnomaly orbitalParams = eccentricToTrueAnomaly orbitalParams . meanToEccentricAnomaly orbitalParams
+
+-- constructors
+fromTrue     :: OrbitalParams -> Angle -> Anomaly
+fromTrue orbit = createAnomaly id (trueToMeanAnomaly orbit) (trueToEccentricAnomaly orbit) orbit
+
+fromMean     :: OrbitalParams -> Angle -> Anomaly
+fromMean orbit = createAnomaly (meanToTrueAnomaly orbit) id (meanToEccentricAnomaly orbit) orbit
+
+fromEpoch     :: OrbitalParams -> Time -> Anomaly
+fromEpoch orbit time = fromMean orbit (2 * pi * time / orbitalPeriod orbit)
+
+-- operations
+addTrue     :: Anomaly -> Angle -> Anomaly
+addTrue anomaly angle = fromTrue (orbitalParams anomaly) (angleTrue anomaly + angle)
+
+addMean      :: Anomaly -> Angle -> Anomaly
+addMean anomaly angle = fromMean (orbitalParams anomaly) (angleMean anomaly + angle)
+
+addTime      :: Anomaly -> Time -> Anomaly
+addTime anomaly time = fromEpoch (orbitalParams anomaly) (timeEpoch anomaly + time)
+
+timeEpoch      :: Anomaly -> Time
+timeEpoch anomaly = (angleMean anomaly / 2*pi) * orbitalPeriod (orbitalParams anomaly)
+
+----------------------
+
 data Orbit = Orbit {params :: OrbitalParams,
-                    _nu     :: Angle, -- true anomaly
-                    _M      :: Angle, --mean anomaly
+                    anomaly :: Anomaly,
                     periapsisEpoch :: Time}
 
-trueAnomaly     = _nu
-meanAnomaly     = _M
+--trueAnomaly     = _nu
+--meanAnomaly     = _M
 
 gravityConst   = 1 -- NOT 9.80665 -- m/s^2
 
@@ -92,16 +151,9 @@ fromStateToOrbitalParams body state epoch = params (fromStateToOrbit body state 
 fromStateToOrbit :: CelestialBody -> IState -> Time -> Orbit
 fromStateToOrbit body state@(IState r v) epoch
                     = Orbit {
-                            params = OrbitalParams {
-                                _a     = __a,                                   -- semi-major axis
-                                _e     = __e,                                   -- eccentricity
-                                _i     = acos (_harr ^. _z / norm _harr),       -- inclination
-                                _omega = calcArgumentOfPeriapsis _earr _z _nhat,-- argument of periapsis
-                                _Omega = acos (_nhat ^._x / _n),
-                                body = body},                                   -- longitude of ascending node
-                            _nu     = _nu,                                      -- true anomaly
-                            _M      = __M,                                      -- mean anomaly
-                            periapsisEpoch = epoch - (_P / __M)}                -- epoch of last periapsis
+                            params = _params,                                   -- longitude of ascending node
+                            anomaly = _anomaly,
+                            periapsisEpoch = epoch - timeEpoch _anomaly}                -- epoch of last periapsis
                       where
                             _r      = norm r
                             -- standard gravitational parameter
@@ -116,13 +168,15 @@ fromStateToOrbit body state@(IState r v) epoch
                             __e      = norm _earr
                             -- specific mechanical energy
                             _E      = quadrance v / 2 - _mu / _r
-                            -- true anomaly
-                            _nu     = calcTrueAnomaly _earr state
-                            -- mean anomaly
-                            __M     = trueToMeanAnomaly __e _nu
                             __a     = - _mu / (2 * _E)
-                            -- orbit period
-                            _P      = orbitalPeriodFromParams __a _mu
+                            _params = OrbitalParams {
+                                _a     = __a,                                   -- semi-major axis
+                                _e     = __e,                                   -- eccentricity
+                                _i     = acos (_harr ^. _z / norm _harr),       -- inclination
+                                _omega = calcArgumentOfPeriapsis _earr _z _nhat,-- argument of periapsis
+                                _Omega = acos (_nhat ^._x / _n),
+                                body = body}
+                            _anomaly = fromTrue _params (calcTrueAnomaly _earr state)
 
 orbitalPeriodFromParams :: Distance -> Double -> Double
 orbitalPeriodFromParams _a _mu      = 2 * pi * sqrt ((_a ** 3) / _mu)
@@ -156,17 +210,6 @@ calcHandedAngle base next handedness
                     | otherwise    = _nu
                     where _nu = acos (dot base next / (norm base * norm next))
 
-
-ellipticalFromTrueAnomaly
-                    :: Double -> Double -> Double
-ellipticalFromTrueAnomaly __e _nu
-                    = 2 * atan (tan (_nu / 2) / sqrt ((1 + __e)/(1-__e)))
-
-meanFromEllipticalAnomaly       :: Double -> Double -> Double
-meanFromEllipticalAnomaly __e __E = __E - __e * sin __E
-
-trueToMeanAnomaly __e =  meanFromEllipticalAnomaly __e . ellipticalFromTrueAnomaly __e
-
 _mubody body    = gravityConst * mass body
 
 -- algorithm from https://downloads.rene-schwarz.com/download/M001-Keplerian_Orbit_Elements_to_Cartesian_State_Vectors.pdf
@@ -177,33 +220,29 @@ newton epsilon iter f f' guess
             where newGuess = guess - (f guess / f' guess)
                   err =  abs (newGuess - guess)
 
-epochToMeanAnomaly   :: Orbit -> Time -> Angle
-epochToMeanAnomaly orbit time = deltaTimeFromMeanAnomalyToMeanAnomaly (params orbit) 0 (time - periapsisEpoch orbit)
+--epochToMeanAnomaly   :: Orbit -> Time -> Angle
+--epochToMeanAnomaly orbit time = deltaTimeFromMeanAnomalyToMeanAnomaly (params orbit) 0 (time - periapsisEpoch orbit)
+--
+--deltaTimeToMeanAnomaly   :: Orbit -> Time -> Angle
+--deltaTimeToMeanAnomaly orbit = deltaTimeFromMeanAnomalyToMeanAnomaly (params orbit) (_M orbit)
 
-deltaTimeToMeanAnomaly   :: Orbit -> Time -> Angle
-deltaTimeToMeanAnomaly orbit = deltaTimeFromMeanAnomalyToMeanAnomaly (params orbit) (_M orbit)
-
-deltaTimeFromMeanAnomalyToMeanAnomaly   :: OrbitalParams -> Angle -> Time -> Angle
-deltaTimeFromMeanAnomalyToMeanAnomaly orbitalParams _M_0 deltaT
-                    = normalizeAngle $ _M_0 + deltaT * sqrt (_mu / (_a orbitalParams ** 3))
-                        where
-                            _mu     = _mubody (body orbitalParams)
+--deltaTimeFromMeanAnomalyToMeanAnomaly   :: OrbitalParams -> Angle -> Time -> Angle
+--deltaTimeFromMeanAnomalyToMeanAnomaly orbitalParams _M_0 deltaT
+--                    = normalizeAngle $ _M_0 + deltaT * sqrt (_mu / (_a orbitalParams ** 3))
+--                        where
+--                            _mu     = _mubody (body orbitalParams)
 
 fromOrbitToState    :: Orbit -> Time -> IState
-fromOrbitToState orbit@(Orbit orbitalParams _nu _M_0 periapsisEpoch) deltaT
-                    = fromOrbitAndTrueAnomalyToState (params orbit) _nu
-                      where
-                            _M_t = deltaTimeToMeanAnomaly orbit deltaT
-                            _E = meanToEllipticalAnomaly orbitalParams _M_t
-                            -- true anomaly
-                            _nu = ellipticalToTrueAnomaly orbitalParams _E
+fromOrbitToState orbit deltaT
+                    = fromOrbitAndAnomalyToState (params orbit) (addTime (anomaly orbit) deltaT)
 
-fromOrbitAndTrueAnomalyToState  :: OrbitalParams -> Angle -> IState
-fromOrbitAndTrueAnomalyToState orbitalParams _nu
+fromOrbitAndAnomalyToState  :: OrbitalParams -> Anomaly -> IState
+fromOrbitAndAnomalyToState orbitalParams anomaly
                     = rotateToBodyInertial orbitalParams (IState r_o v_o) -- transform to inertial frame
                       where
-                            _mu     = _mubody (body orbitalParams)
-                            _E = ellipticalFromTrueAnomaly (_e orbitalParams) _nu
+                            _mu = _mubody (body orbitalParams)
+                            _nu = angleTrue anomaly
+                            _E = angleEccentric anomaly
                             -- distance to central body
                             _rc = _a orbitalParams * (1 - _e orbitalParams * cos _E)
                             -- in orbital coordinates
@@ -211,19 +250,6 @@ fromOrbitAndTrueAnomalyToState orbitalParams _nu
                             v_o = (sqrt (_mu * _a orbitalParams) / _rc) *^ makevect (- sin _E) (sqrt (1 - _e orbitalParams ** 2) * cos _E) 0
 
 maxIter = 100
-
-meanToEllipticalAnomaly :: OrbitalParams -> Angle -> Angle
-meanToEllipticalAnomaly orbitalParams _M_t = newton 1e-4 maxIter f_E f_E' _M_t                -- numerical solve for eccentric anomaly
-                                where
-                                    f_E _E  = _E - _e orbitalParams * sin _E - _M_t
-                                    f_E' _E = 1 - _e orbitalParams * cos _E
-
-ellipticalToTrueAnomaly     :: OrbitalParams -> Angle -> Angle
-ellipticalToTrueAnomaly orbitalParams _E
-            = 2 * atan2 (sqrt (1+_e orbitalParams) * sin (_E/2)) (sqrt (1-_e orbitalParams) * cos (_E/2))
-
-meanToTrueAnomaly       :: OrbitalParams -> Angle -> Angle
-meanToTrueAnomaly orbitalParams = ellipticalToTrueAnomaly orbitalParams . meanToEllipticalAnomaly orbitalParams
 
 rotateToBodyInertial    :: OrbitalParams -> IState -> IState
 rotateToBodyInertial orbitalParams (IState r_o v_o)
@@ -317,8 +343,8 @@ calculateSigleStepNeededVelocity body state@(IState position v) targetPlace alph
                                         _mu     = _mubody body
                                         _earr = eccentricityVector _OA _AB _harr _mu
                                         -- ASSERT calcSignedAngle _earr _OA == _nu interceptOrbit
-                                        _nu_t = beta + _nu interceptOrbit -- with proper handedness! (direction of rotation)
-                                        IState ipos ivel = fromOrbitAndTrueAnomalyToState (params interceptOrbit) _nu_t
+                                        _anomaly_t = addTrue (anomaly interceptOrbit) beta -- with proper handedness! (direction of rotation)
+                                        IState ipos ivel = fromOrbitAndAnomalyToState (params interceptOrbit) _anomaly_t
                                       in ipos
 --                                      traceShow (calcSignedAngle _earr _OA _AB - _nu interceptOrbit) $
 
@@ -326,19 +352,19 @@ univariateMin      :: Double -> Double -> (Double -> Double) -> Double
 univariateMin min max f = let guide = C.easyOptimize f (min, max) 100 (mkStdGen 0) in C.pt guide
 
 
-trueAnomalyToEpoch  :: OrbitalParams -> Angle -> Time
-trueAnomalyToEpoch orbit trueAnomaly
-                    = let meanAnomalyAtBurn = trueToMeanAnomaly (_e orbit) trueAnomaly
-                      in meanAnomalyAtBurn * orbitalPeriod orbit
+--trueAnomalyToEpoch  :: OrbitalParams -> Angle -> Time
+--trueAnomalyToEpoch orbit trueAnomaly
+--                    = let meanAnomalyAtBurn = trueToMeanAnomaly (_e orbit) trueAnomaly
+--                      in meanAnomalyAtBurn * orbitalPeriod orbit
 
 
 calculateStopBurn :: OrbitalParams -> Place -> ScheduledBurn
 calculateStopBurn orbit direction
                     = let
-                        IState periapsis velAtPeriapsis = fromOrbitAndTrueAnomalyToState orbit 0.0
-                        targetTrueAnomaly = calcSignedAngle periapsis direction velAtPeriapsis
-                        stateAtTarget = fromOrbitAndTrueAnomalyToState orbit targetTrueAnomaly
-                      in ScheduledBurn (trueAnomalyToEpoch orbit targetTrueAnomaly) stateAtTarget (IState (position stateAtTarget) (makevect 0 0 0))
+                        IState periapsis velAtPeriapsis = fromOrbitAndAnomalyToState orbit (fromTrue orbit 0.0)
+                        targetAnomaly = fromTrue orbit (calcSignedAngle periapsis direction velAtPeriapsis)
+                        stateAtTarget = fromOrbitAndAnomalyToState orbit targetAnomaly
+                      in ScheduledBurn (timeEpoch targetAnomaly) stateAtTarget (IState (position stateAtTarget) (makevect 0 0 0))
 
 type DeltaV = Double
 data ScheduledBurn = ScheduledBurn {scheduledTime :: Time, startState :: IState, endState :: IState}
@@ -370,7 +396,7 @@ data FlightPlan = FlightPlan {current :: Orbit, burns :: [ExecuteBurn]}
 prepareBurn     :: OrbitalParams -> ScheduledBurn -> Double -> ExecuteBurn
 prepareBurn orbit burn maxAccel
                 = let
-                    timeToBurn = normalizePeriod (orbitalPeriod orbit) $ trueAnomalyToEpoch orbit (scheduledTime burn)
+                    timeToBurn = timeEpoch (fromEpoch orbit (scheduledTime burn))
                     burnTime = calcDeltaV burn / maxAccel
                     acceleration = velocityChange burn ^/ burnTime
                    in ExecuteBurn (timeToBurn - burnTime / 2) (timeToBurn + burnTime / 2) acceleration
@@ -385,10 +411,7 @@ totalVelocityChange    :: ExecuteBurn -> Velocity
 totalVelocityChange burn = burnTime burn *^ acceleration burn
 
 coast           :: Orbit -> Time -> Orbit
-coast orbit time     = orbit {_M = _M_t, _nu = _nu_t}
-                  where
-                    _M_t = epochToMeanAnomaly orbit time
-                    _nu_t = meanToTrueAnomaly (params orbit) _M_t
+coast orbit time     = orbit {anomaly = fromEpoch (params orbit) time}
 
 evolveToTime     :: FlightPlan -> Time -> FlightPlan
 evolveToTime plan@(FlightPlan current burns) time
