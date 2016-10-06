@@ -73,7 +73,7 @@ data Anomaly = Anomaly {orbitalParams :: OrbitalParams, angleTrue, angleMean , a
 createAnomaly :: (Angle->Angle) -> (Angle->Angle) -> (Angle->Angle) -> OrbitalParams -> Angle -> Anomaly
 createAnomaly f g h params value
                 | value < 0 || value >= 2*pi   =createAnomaly f h g params (normalizeAngle value)
-                | otherwise                    = Anomaly params (f value) (g value) (h value)
+                | otherwise                    = Anomaly params (normalizeAngle $ f value) (normalizeAngle $ g value) (normalizeAngle $ h value)
 
 trueToEccentricAnomaly
                     :: OrbitalParams -> Double -> Double
@@ -87,7 +87,7 @@ trueToMeanAnomaly   :: OrbitalParams -> Double -> Double
 trueToMeanAnomaly orbit =  eccentricToMeanAnomaly orbit . trueToEccentricAnomaly orbit
 
 meanToEccentricAnomaly :: OrbitalParams -> Angle -> Angle
-meanToEccentricAnomaly orbitalParams _M_t = newton 1e-4 maxIter f_E f_E' _M_t                -- numerical solve for eccentric anomaly
+meanToEccentricAnomaly orbitalParams _M_t = newton 1e-5 maxIter f_E f_E' _M_t                -- numerical solve for eccentric anomaly
                                 where
                                     f_E _E  = _E - _e orbitalParams * sin _E - _M_t
                                     f_E' _E = 1 - _e orbitalParams * cos _E
@@ -165,7 +165,7 @@ fromStateToOrbit body state@(IState r v) epoch
                             _n      = norm _nhat
                             -- excentricity vector
                             _earr   = eccentricityVector r v _harr _mu
-                            __e      = norm _earr
+                            __e      = traceShow _earr $ norm _earr
                             -- specific mechanical energy
                             _E      = quadrance v / 2 - _mu / _r
                             __a     = - _mu / (2 * _E)
@@ -176,7 +176,7 @@ fromStateToOrbit body state@(IState r v) epoch
                                 _omega = calcArgumentOfPeriapsis _earr _z _nhat,-- argument of periapsis
                                 _Omega = acos (_nhat ^._x / _n),
                                 body = body}
-                            _anomaly = fromTrue _params (calcTrueAnomaly _earr state)
+                            _anomaly = traceShow (calcTrueAnomaly _earr state) $ fromTrue _params (calcTrueAnomaly _earr state)
 
 orbitalPeriodFromParams :: Distance -> Double -> Double
 orbitalPeriodFromParams _a _mu      = 2 * pi * sqrt ((_a ** 3) / _mu)
@@ -198,7 +198,7 @@ calcArgumentOfPeriapsis _earr _z _nhat
 
 calcTrueAnomaly     :: Vector3 -> IState -> Double
 calcTrueAnomaly _earr (IState r v)
-                    = calcSignedAngle _earr r v
+                    = traceShow r $ calcSignedAngle _earr r v
 
 calcSignedAngle     :: Vector3 -> Vector3 -> Vector3 -> Double
 calcSignedAngle base next velocity
@@ -208,7 +208,7 @@ calcHandedAngle     :: Vector3 -> Vector3 -> Double -> Double
 calcHandedAngle base next handedness
                     | handedness < 0  = 2 * pi - _nu
                     | otherwise    = _nu
-                    where _nu = acos (dot base next / (norm base * norm next))
+                    where _nu = acos (dot base next / (norm base * norm next)) -- fixme
 
 _mubody body    = gravityConst * mass body
 

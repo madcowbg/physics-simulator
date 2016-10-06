@@ -21,14 +21,18 @@ executable musings
         linear -any,
         gloss -any,
         mtl -any,
-        deepseq
+        deepseq -any,
+        lens -any,
+        mtl -any,
+        transformers -any
     cc-options: -O3
     default-language: Haskell2010
     extra-libraries:
         m
     hs-source-dirs: src
     other-modules:
-        Physics.Basic
+        Physics.BasicOrbitsDraw
+        Physics.Planning.Linear
         Swarm.Swarm
         Swarm.Settings
         A.E

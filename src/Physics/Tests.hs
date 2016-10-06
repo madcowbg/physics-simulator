@@ -13,7 +13,8 @@
 -----------------------------------------------------------------------------
 
 module Physics.Tests (
-    runBasicDemo
+    runBasicDemo,
+    runOrbitsDemo
 ) where
 
 import Physics.Coordinates.Inertial
@@ -25,6 +26,7 @@ import Physics.World.Small
 import Physics.AbstractForces
 import Physics.Forces
 import Physics.BasicDraw
+import Physics.BasicOrbitsDraw
 import Physics.Craft.Rigid
 import Physics.Craft.Rocket
 import Physics.Control.Basic
@@ -113,6 +115,7 @@ controlledUpdate ups vp t world@(SmallWorld time _ _ _ _)
                     | otherwise                     = update vp t world
 
 runBasicDemo    :: IO()
-runBasicDemo    = do
-                    simulate window white fps (createScene) drawOnScreen (controlledUpdate 0.02)
+runBasicDemo    = simulate window white fps createScene drawOnScreen (controlledUpdate 0.02)
 
+runOrbitsDemo    :: IO()
+runOrbitsDemo    = display window white drawOrbitsOnScreen

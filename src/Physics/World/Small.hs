@@ -70,7 +70,7 @@ findBestControls time criterion world
                             bnds        = (fromList (replicate ndim 0.0), fromList (replicate ndim 1.0))
                             optimFunc   = controlFitness criterion (attachControlsAndSimulate time) craftFun world
                             func        = filterOutsideRange optimFunc . toList
-                            guide       = easyOptimize func bnds 5 (mkStdGen 5)
+                            guide       = easyOptimize func bnds 10 (mkStdGen 5)
                             solution    = pt guide
 
 filterOutsideRange      :: ([Double] -> Double) -> [Double] -> Double

@@ -21,12 +21,48 @@ module Physics.Coordinates.Transform (
 
 import Physics.Coordinates.FrameOfReference
 
-
-
 class (EmbeddedFrameOfReference f) => NestedFrameOfReference f where
-    transformPlaceFrom      ::
+    parentFrameOfReference :: (EmbeddedFrameOfReference g) => f -> g
+    hasParent               :: f -> Bool
+
+    transformPlaceFrom      :: (EmbeddedFrameOfReference g) => g -> f -> Place
+    transformPlaceFrom      = transform placeFrom placeTo
+
+    transformStateFrom      :: (EmbeddedFrameOfReference g) => g -> f -> StateTriplet
+    transformStateFrom      = transform stateFrom stateTo
+
+    transformPlaceTo        :: (EmbeddedFrameOfReference g) => f -> g -> Place
 
 
+transform   :: (EmbeddedFrameOfReference f, EmbeddedFrameOfReference g) => (f -> a) -> (g -> a) -> f -> g -> a -> a
+transform fwd back f g param
+            = let commonParent = findCommonParent g f
+               in transformFromParent back f commonParent . transformToParent fwd g commonParent
+            -- g --(back)--> commonParent --(forward)--> f
+
+transformToParent   :: (EmbeddedFrameOfReference f, EmbeddedFrameOfReference g) => (g -> a) -> f -> g -> a -> a
+transformToParent fwd g commonParent
+                    | f == parent       = param
+                    | otherwise         = transformToParent fwd (parentFrameOfReference f) parent (fwd param)
+
+transformFromParent :: (EmbeddedFrameOfReference f, EmbeddedFrameOfReference g) => (f -> a) -> f -> g -> a -> a
+transformFromParent back f commonParent
+                    | f == parent       = param
+                    | otherwise         = back (transformToParent back (parentFrameOfReference f) parent param)
+
+findCommonParent    :: (EmbeddedFrameOfReference f, EmbeddedFrameOfReference g, EmbeddedFrameOfReference u) => f -> g -> u
+findCommonParent f g= parentFrameOfReference (removeCommon (parents f) (parents g))
+
+removeCommon        :: (EmbeddedFrameOfReference f) => [f] -> [g] -> f
+removeCommon [] _   = error
+removeCommon _  []  = error
+removeCommon (f:~fs) (g:~gs)
+                    | f == g    = removeCommon fs gs
+                    | otherwise = f
+
+parents             :: (EmbeddedFrameOfReference f) => f -> [f]
+parents f           | hasParent f   = f:parents (parentFrameOfReference f)
+                    | otherwise     = [f]
 
 --    globalPlace                 :: e -> Place -> Place
 --    localPlace                  :: e -> Place -> Place

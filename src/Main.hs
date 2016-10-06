@@ -52,4 +52,5 @@ main :: IO ()
 --    let timePassed = diffUTCTime now start
 --    print (show timePassed)
 ---- :set +s
-main = runBasicDemo
+--main = runBasicDemo
+main = runOrbitsDemo

@@ -47,6 +47,8 @@ import Physics.Orbit.Freefall
 
 import Debug.Trace
 
+import Physics.DrawUtils
+
 
 textSize = 0.075
 
@@ -172,16 +174,6 @@ drawOrbitZ offset place vel =
                         centeredPts = map ((+ bodyCenter) . position) pts
                         currPt = (+ bodyCenter) . position $ fromOrbitToState orbit 0
 
-printOrbitDescription :: Float -> Orbit -> Writer ConsoleLog ()
-printOrbitDescription offset (Orbit (OrbitalParams _a _e _i _omega _Omega body) anomaly epochAtPeriapsis)
-                        = tell ["_a = " ++ showFixed _a,
-                                "_e = " ++ showFixedHighPrecision _e,
-                                "_i = " ++ showFixedHighPrecision _i,
-                                "_omega = " ++ showFixedHighPrecision _omega,
-                                "_Omega = " ++ showFixedHighPrecision _Omega,
-                                "_nu = " ++ showFixedHighPrecision (angleTrue anomaly),
-                                "_M = " ++ showFixedHighPrecision (angleMean anomaly),
-                                "_epoch = " ++ showFixedHighPrecision epochAtPeriapsis]
 
 drawLocalVelocities :: (EmbeddedFrameOfReference f) => f -> Velocity -> RigidPointObj -> Picture
 drawLocalVelocities system craftVel obj
@@ -201,26 +193,11 @@ drawCenter (RigidCraft parts _ _)
                             = line (map ptCoord (parts ++ [head parts]))--[(-10, -15), (0, 15), (10,-15), (-10,-15)]
 
 ptCoord p = ptPlaceCoord (objPlace p)
-ptPlaceCoord place = (double2Float $ xcoord place, double2Float $ zcoord $ place)
 
 instance Drawable RigidPointObj where
     draw obj        = return $ pictures [line [(0,0), (double2Float (xcoord place), double2Float (zcoord place))], drawCircle place 3]
                         where place = objPlace obj
 
-translateD          :: Double -> Double -> Picture -> Picture
-translateD x y      = translate (double2Float x) (double2Float y)
-
-drawCircle          :: Place -> Double -> Picture
-drawCircle place size = translateD (xcoord place) (zcoord place) $ circle (double2Float size)
-
-drawArrow           :: Double -> Double -> Double -> Double -> Picture
-drawArrow x y xvel yvel = translateD x y $ line [(0.0,0.0), (double2Float xvel, double2Float yvel)]
-
-drawRectangle       :: Double -> Double -> Double -> Double -> Picture
-drawRectangle cx cy width height = translateD cx cy $ color (dark green) $ rectangleSolid (double2Float width) (double2Float height)
-
-drawVector          :: Place -> Velocity -> Picture
-drawVector place vel = drawArrow (xcoord place) (zcoord place) (xcoord vel) (zcoord vel)
 
 
 printCraftDescription :: RotatingCoordinates -> InertiaTensor -> Writer ConsoleLog ()
@@ -243,21 +220,19 @@ drawEnergy gravity rocket
                         potential = calcPotential gravity rocket
                         kinetic = calcKinetic rocket
 
-showFixed f = showFFloat (Just 2) f ""
-showFixedHighPrecision f = showFFloat (Just 10) f ""
+printOrbitDescription :: Float -> Orbit -> Writer ConsoleLog ()
+printOrbitDescription offset (Orbit (OrbitalParams _a _e _i _omega _Omega body) anomaly epochAtPeriapsis)
+                        = tell ["_a = " ++ showFixed _a,
+                                "_e = " ++ showFixedHighPrecision _e,
+                                "_i = " ++ showFixedHighPrecision _i,
+                                "_omega = " ++ showFixedHighPrecision _omega,
+                                "_Omega = " ++ showFixedHighPrecision _Omega,
+                                "_nu = " ++ showFixedHighPrecision (angleTrue anomaly),
+                                "_M = " ++ showFixedHighPrecision (angleMean anomaly),
+                                "_epoch = " ++ showFixedHighPrecision epochAtPeriapsis]
 
 
 --appendLine        :: String -> Picture -> Picture
 --appendLine txt picture = pictures [translate 0 (-150) picture, text txt]
 
 
-type ConsoleLog = [String]
-
-printLog    :: Float -> Float -> Float -> Color -> ConsoleLog -> Picture
-printLog xoff yoff textSize textColor lines
-            = color textColor $ translate xoff yoff $ scale textSize textSize
-                $ pictures (printall 0 lines)
-
-printall        :: Float -> ConsoleLog -> [Picture]
-printall offset [] = []
-printall offset (line:lines) = translate 0 (-offset) (text line) : printall (offset + 150) lines
