@@ -15,11 +15,7 @@ module Main (
     main
 ) where
 
-import A.B
-import A.C
-import A.D
 import Swarm.Utils
-import A.E
 
 import GHC.Conc
 import Data.Time
@@ -52,5 +48,5 @@ main :: IO ()
 --    let timePassed = diffUTCTime now start
 --    print (show timePassed)
 ---- :set +s
---main = runBasicDemo
-main = runOrbitsDemo
+main = runBasicDemo
+--main = runOrbitsDemo
